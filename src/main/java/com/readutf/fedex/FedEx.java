@@ -3,6 +3,7 @@ package com.readutf.fedex;
 
 import com.google.gson.Gson;
 import com.readutf.fedex.parcels.Parcel;
+import com.readutf.fedex.parcels.ParcelListener;
 import com.readutf.fedex.response.FedExResponse;
 import com.readutf.fedex.response.FedExResponseParcel;
 import com.readutf.fedex.utils.ClassUtils;
@@ -12,9 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 import redis.clients.jedis.JedisPool;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -25,8 +24,9 @@ public class FedEx {
     @Getter private static FedEx instance;
     @Getter @Setter private boolean debug = false;
 
-    HashMap<String, Parcel> parcels = new HashMap<>();
-    HashMap<UUID, Consumer<FedExResponse>> responseConsumers = new HashMap<>();
+    HashMap<String, Parcel> parcels;
+    HashMap<UUID, Consumer<FedExResponse>> responseConsumers;
+    List<ParcelListener> parcelListeners;
 
     UUID senderId;
     String channel;
@@ -43,6 +43,9 @@ public class FedEx {
         this.jedisPool = jedisPool;
         this.gson = new Gson();
         this.logger = Logger.getLogger("FedEx");
+        this.parcels = new HashMap<>();
+        this.responseConsumers = new HashMap<>();
+        this.parcelListeners = new ArrayList<>();
         senderId = UUID.randomUUID();
         registerParcel(FedExResponseParcel.class);
         connect();
@@ -91,6 +94,10 @@ public class FedEx {
 
     public void registerParcels(Class<?> mainClass) {
         ClassUtils.getClassesInPackage(mainClass).stream().filter(Parcel.class::isAssignableFrom).forEach(this::registerParcelUnsafe);
+    }
+
+    public void registerParcelListeners(ParcelListener... parcelListener) {
+        parcelListeners.addAll(Arrays.asList(parcelListener));
     }
 
     public void registerParcels(Class<? extends Parcel>... parcels) {

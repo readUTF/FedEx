@@ -38,6 +38,7 @@ public class FedExPubSub extends JedisPubSub {
             if(fedEx.getParcels().containsKey(name)) {
                 Parcel parcelHandler = fedEx.getParcels().get(name);
                 FedExResponse fedExResponse = parcelHandler.onReceive(parselId, jsonObject);
+
                 if(!name.equalsIgnoreCase("RESPONSE_PARCEL") && fedExResponse != null) {
                     FedEx.getInstance().sendParcel(fedExResponse.getId(), new FedExResponseParcel(fedExResponse), null);
                 }
