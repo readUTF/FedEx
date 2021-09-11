@@ -3,3 +3,10 @@ FedEx is a wrapper for Jedis, it allows you to better send and manage data being
 
 # Initialising FedEx
 Creating a FedEx instance requires 2 things, a channel name and a JedisPool. The messaging channel is where all data will be sent and is best kept unique to each project. Any FedEx instance listening on this channel will attempt to handle any packets sent through.
+
+**Example**:
+```java
+JedisPool jedis = new JedisPool("localhost", 6379);
+FedEx fedEx = new FedEx("example", jedis);
+```
+
