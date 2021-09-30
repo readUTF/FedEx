@@ -32,9 +32,7 @@ public class FedEx {
     String channel;
     JedisPool jedisPool;
     Gson gson;
-
     Logger logger;
-
     FedExPubSub pubSub;
 
     public FedEx(String channel, JedisPool jedisPool) {
