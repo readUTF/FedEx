@@ -3,8 +3,11 @@ package com.readutf.fedex.response;
 import com.google.gson.JsonObject;
 import com.readutf.fedex.FedEx;
 import com.readutf.fedex.parcels.Parcel;
+import com.readutf.fedex.utils.Pair;
 
+import java.util.HashMap;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public class FedExResponseParcel extends Parcel {
 
@@ -26,9 +29,11 @@ public class FedExResponseParcel extends Parcel {
 
     @Override
     public FedExResponse onReceive(UUID parcelId, JsonObject data) {
-        if(FedEx.getInstance().getResponseConsumers().containsKey(parcelId)) {
+        HashMap<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
+        if(responseConsumers.containsKey(parcelId)) {
             FedExResponse response = new FedExResponse(data);
-            FedEx.getInstance().getResponseConsumers().get(parcelId).accept(response);
+            responseConsumers.get(parcelId).getKey().accept(response);
+            responseConsumers.remove(parcelId);
         }
         return null;
     }

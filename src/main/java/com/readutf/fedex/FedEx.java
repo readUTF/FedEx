@@ -6,11 +6,14 @@ import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.parcels.ParcelListener;
 import com.readutf.fedex.response.FedExResponse;
 import com.readutf.fedex.response.FedExResponseParcel;
+import com.readutf.fedex.response.TimeoutTask;
 import com.readutf.fedex.utils.ClassUtils;
+import com.readutf.fedex.utils.Pair;
 import com.readutf.fedex.utils.UnsafeHandler;
-import com.sun.media.jfxmedia.events.PlayerEvent;
+
 import lombok.Getter;
 import lombok.Setter;
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import java.util.*;
@@ -25,13 +28,16 @@ public class FedEx {
     @Getter @Setter private boolean debug = false;
 
     HashMap<String, Parcel> parcels;
-    HashMap<UUID, Consumer<FedExResponse>> responseConsumers;
+    HashMap<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers;
     List<ParcelListener> parcelListeners;
 
     UUID senderId;
     String channel;
     JedisPool jedisPool;
     Gson gson;
+    Jedis jedis;
+
+    TimeoutTask timeoutTask;
 
     Logger logger;
 
@@ -46,28 +52,38 @@ public class FedEx {
         this.parcels = new HashMap<>();
         this.responseConsumers = new HashMap<>();
         this.parcelListeners = new ArrayList<>();
+        jedis = jedisPool.getResource();
+        timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
         registerParcel(FedExResponseParcel.class);
         connect();
+        active = true;
     }
 
     public void connect() {
         ForkJoinPool.commonPool().execute(() -> {
-            jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel);
+            getSubscriber().subscribe(pubSub = new FedExPubSub(this), channel);
         });
+        timeoutTask.start();
     }
+
+    @Getter boolean active;
 
     public void close() {
         if(pubSub != null && pubSub.isSubscribed()) {
             pubSub.unsubscribe();
         }
         jedisPool.close();
+        active = false;
     }
 
     public void sendParcel(UUID id, Parcel parcel, Consumer<FedExResponse> fedexResponse) {
         if(id == null) id = UUID.randomUUID();
-        if(fedexResponse != null) responseConsumers.put(id, fedexResponse);
-        jedisPool.getResource().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + id.toString());
+        if(fedexResponse != null) responseConsumers.put(id, new Pair<>(fedexResponse, System.currentTimeMillis()));
+        UUID finalId = id;
+        ForkJoinPool.commonPool().execute(() -> {
+            getPublisher().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId.toString());
+        });
     }
 
     public void sendParcel(Parcel parcel) {
@@ -102,6 +118,20 @@ public class FedEx {
 
     public void registerParcels(Class<? extends Parcel>... parcels) {
         Arrays.stream(parcels).forEach(this::registerParcelUnsafe);
+    }
+
+    private Jedis publisher;
+    public Jedis getPublisher() {
+        if(publisher == null) {
+            publisher = jedisPool.getResource();
+        }
+        return publisher;
+    }
+
+    private Jedis subscriber;
+    public Jedis getSubscriber() {
+        if(subscriber == null) subscriber = jedisPool.getResource();
+        return subscriber;
     }
 
     public void debug(String s) { if(isDebug()) logger.severe(s);}
