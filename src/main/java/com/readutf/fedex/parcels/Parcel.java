@@ -1,6 +1,7 @@
 package com.readutf.fedex.parcels;
 
 import com.google.gson.JsonObject;
+import com.readutf.fedex.FedEx;
 import com.readutf.fedex.response.FedExResponse;
 import lombok.Getter;
 
@@ -19,5 +20,9 @@ public abstract class Parcel {
     * */
 
     public abstract FedExResponse onReceive(UUID parcelId, JsonObject data);
+
+    public void send() {
+        FedEx.getInstance().sendParcel(this);
+    }
 
 }
