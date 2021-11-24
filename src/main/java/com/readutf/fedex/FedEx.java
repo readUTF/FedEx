@@ -1,6 +1,5 @@
 package com.readutf.fedex;
 
-
 import com.google.gson.Gson;
 import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.parcels.ParcelListener;
@@ -9,131 +8,178 @@ import com.readutf.fedex.response.FedExResponseParcel;
 import com.readutf.fedex.response.TimeoutTask;
 import com.readutf.fedex.utils.ClassUtils;
 import com.readutf.fedex.utils.Pair;
-import com.readutf.fedex.utils.UnsafeHandler;
-
 import lombok.Getter;
 import lombok.Setter;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import java.util.*;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 @Getter
+@SuppressWarnings("unused")
 public class FedEx {
 
-    @Getter private static FedEx instance;
-    @Getter @Setter private boolean debug = false;
+    @Getter
+    private static FedEx instance;
 
-    HashMap<String, Parcel> parcels;
-    HashMap<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers;
-    List<ParcelListener> parcelListeners;
+    private final Executor executor;
+    private final Map<String, Parcel> parcels = new HashMap<>();
+    private final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
+    private final List<ParcelListener> parcelListeners = new ArrayList<>();
+    private final UUID senderId;
+    private final String channel;
+    private final JedisPool jedisPool;
+    private final Gson gson;
+    private final Jedis jedis;
+    private final TimeoutTask timeoutTask;
+    private final Logger logger = Logger.getLogger("FedEx");
 
-    UUID senderId;
-    String channel;
-    JedisPool jedisPool;
-    Gson gson;
-    Jedis jedis;
+    private boolean active;
+    @Setter
+    private boolean debug = false;
 
-    TimeoutTask timeoutTask;
+    private FedExPubSub pubSub;
+    private Jedis publisher;
+    private Jedis subscriber;
 
-    Logger logger;
-
-    FedExPubSub pubSub;
-
-    public FedEx(String channel, JedisPool jedisPool) {
+    public FedEx(String channel, JedisPool jedisPool, Gson gson, Executor executor) {
         instance = this;
         this.channel = channel;
         this.jedisPool = jedisPool;
-        this.gson = new Gson();
-        this.logger = Logger.getLogger("FedEx");
-        this.parcels = new HashMap<>();
-        this.responseConsumers = new HashMap<>();
-        this.parcelListeners = new ArrayList<>();
+        this.gson = gson;
+        this.executor = executor;
+
         jedis = jedisPool.getResource();
         timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
-        registerParcel(FedExResponseParcel.class);
+
+        registerParcel(new FedExResponseParcel(null));
         connect();
-        active = true;
+    }
+
+    public FedEx(String channel, JedisPool jedisPool, Gson gson) {
+        this(channel, jedisPool, gson, ForkJoinPool.commonPool());
+    }
+
+    public FedEx(String channel, JedisPool jedisPool, Executor executor) {
+        this(channel, jedisPool, new Gson(), executor);
+    }
+
+    public FedEx(String channel, JedisPool jedisPool) {
+        this(channel, jedisPool, new Gson(), ForkJoinPool.commonPool());
     }
 
     public void connect() {
-        ForkJoinPool.commonPool().execute(() -> {
-            getSubscriber().subscribe(pubSub = new FedExPubSub(this), channel);
-        });
+        active = true;
+
+        executor.execute(() -> getSubscriber().subscribe(pubSub = new FedExPubSub(this), channel));
         timeoutTask.start();
     }
 
-    @Getter boolean active;
-
     public void close() {
-        if(pubSub != null && pubSub.isSubscribed()) {
+        active = false;
+        if (pubSub != null && pubSub.isSubscribed()) {
             pubSub.unsubscribe();
         }
+
         jedisPool.close();
-        active = false;
     }
 
     public void sendParcel(UUID id, Parcel parcel, Consumer<FedExResponse> fedexResponse) {
-        if(id == null) id = UUID.randomUUID();
-        if(fedexResponse != null) responseConsumers.put(id, new Pair<>(fedexResponse, System.currentTimeMillis()));
+        if (id == null)
+            id = UUID.randomUUID();
+
+        if (fedexResponse != null)
+            responseConsumers.put(id, new Pair<>(fedexResponse, System.currentTimeMillis()));
+
         UUID finalId = id;
-        ForkJoinPool.commonPool().execute(() -> {
-            getPublisher().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId.toString());
-        });
+        executor.execute(() ->
+                getPublisher().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId));
     }
 
+    /**
+     * Sends a parcel over the network
+     *
+     * @param parcel The parcel
+     */
     public void sendParcel(Parcel parcel) {
         sendParcel(null, parcel, null);
     }
 
-    public void sendParcel(Parcel parcel, Consumer<FedExResponse> fedExResponse) {
-        sendParcel(null, parcel, fedExResponse);
+    /**
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param parcel           The parcel
+     * @param responseConsumer The response consumer
+     */
+    public void sendParcel(Parcel parcel, Consumer<FedExResponse> responseConsumer) {
+        sendParcel(null, parcel, responseConsumer);
     }
 
     public void sendParcel(UUID id, Parcel parcel) {
         sendParcel(id, parcel, null);
     }
 
-    public void registerParcel(Class<? extends Parcel> parcel) {
-        Parcel instance = new UnsafeHandler<Parcel>(parcel).getInstance();
-        parcels.put(instance.getName(), instance);
+    /**
+     * Registers a parcel
+     *
+     * @param parcel The parcel
+     */
+    public void registerParcel(Parcel parcel) {
+        parcels.put(parcel.getName(), parcel);
     }
 
-    private void registerParcelUnsafe(Class<?> parcel) {
-        Parcel instance = new UnsafeHandler<Parcel>(parcel).getInstance();
-        parcels.put(instance.getName(), instance);
+    /**
+     * Registers a parcel by a class, needs a no-arg constructor
+     *
+     * @param parcelClass The class
+     */
+    public void registerParcel(Class<? extends Parcel> parcelClass) {
+        Parcel parcel = ClassUtils.tryGetInstance(parcelClass);
+        if (parcel == null) {
+            logger.warning("Parcel " + parcelClass.getName() + " could not be registered, please make a no-arg constructor.");
+        } else {
+            parcels.put(parcel.getName(), parcel);
+        }
     }
 
+    /**
+     * Registers all parcels in the package of `mainClass` using reflection and JarEntries
+     *
+     * @param mainClass The class
+     */
+    @SuppressWarnings("unchecked")
     public void registerParcels(Class<?> mainClass) {
-        ClassUtils.getClassesInPackage(mainClass).stream().filter(Parcel.class::isAssignableFrom).forEach(this::registerParcelUnsafe);
+        ClassUtils.getClassesInPackage(mainClass)
+                .stream()
+                .filter(Parcel.class::isAssignableFrom)
+                .forEach(clazz -> registerParcel((Class<? extends Parcel>) clazz));
     }
 
     public void registerParcelListeners(ParcelListener... parcelListener) {
         parcelListeners.addAll(Arrays.asList(parcelListener));
     }
 
-    public void registerParcels(Class<? extends Parcel>... parcels) {
-        Arrays.stream(parcels).forEach(this::registerParcelUnsafe);
-    }
-
-    private Jedis publisher;
     public Jedis getPublisher() {
-        if(publisher == null) {
+        if (publisher == null) {
             publisher = jedisPool.getResource();
         }
+
         return publisher;
     }
 
-    private Jedis subscriber;
     public Jedis getSubscriber() {
-        if(subscriber == null) subscriber = jedisPool.getResource();
+        if (subscriber == null)
+            subscriber = jedisPool.getResource();
+
         return subscriber;
     }
 
-    public void debug(String s) { if(isDebug()) logger.severe(s);}
-
+    public void debug(String s) {
+        if (debug) logger.severe(s);
+    }
 }

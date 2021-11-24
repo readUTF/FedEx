@@ -4,10 +4,7 @@ import com.google.gson.JsonObject;
 import com.readutf.fedex.FedEx;
 import com.readutf.fedex.utils.Pair;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class TimeoutTask extends Thread {
@@ -20,13 +17,17 @@ public class TimeoutTask extends Thread {
     public void run() {
         while (FedEx.getInstance().isActive()) {
             List<UUID> toRemove = new ArrayList<>();
-            HashMap<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
-            responseConsumers.forEach((uuid, consumerLongPair) -> {
-                if(System.currentTimeMillis() - consumerLongPair.getValue() > 3000) {
-                    consumerLongPair.getKey().accept(new FedExResponse(uuid, FedExResponse.ResponseType.TIMED_OUT, new JsonObject()));
+            Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
+            for (Map.Entry<UUID, Pair<Consumer<FedExResponse>, Long>> entry : responseConsumers.entrySet()) {
+                UUID uuid = entry.getKey();
+                Pair<Consumer<FedExResponse>, Long> responseConsumerAndTimestamp = entry.getValue();
+                if(System.currentTimeMillis() - responseConsumerAndTimestamp.getValue() > 3000) {
+                    responseConsumerAndTimestamp.getKey().accept(new FedExResponse(uuid, FedExResponse.ResponseType.TIMED_OUT, new JsonObject()));
                 }
+
                 toRemove.add(uuid);
-            });
+            }
+
             toRemove.forEach(responseConsumers::remove);
 
             try {
