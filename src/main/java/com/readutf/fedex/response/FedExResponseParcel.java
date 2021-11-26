@@ -5,13 +5,13 @@ import com.readutf.fedex.FedEx;
 import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.utils.Pair;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 public class FedExResponseParcel extends Parcel {
 
-    FedExResponse response;
+    private final FedExResponse response;
 
     public FedExResponseParcel(FedExResponse fedExResponse) {
         response = fedExResponse;
@@ -29,8 +29,8 @@ public class FedExResponseParcel extends Parcel {
 
     @Override
     public FedExResponse onReceive(UUID parcelId, JsonObject data) {
-        HashMap<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
-        if(responseConsumers.containsKey(parcelId)) {
+        Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
+        if (responseConsumers.containsKey(parcelId)) {
             FedExResponse response = new FedExResponse(data);
             responseConsumers.get(parcelId).getKey().accept(response);
             responseConsumers.remove(parcelId);

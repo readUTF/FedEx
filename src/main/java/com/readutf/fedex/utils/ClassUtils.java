@@ -3,17 +3,35 @@ package com.readutf.fedex.utils;
 import lombok.experimental.UtilityClass;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 @UtilityClass
 public final class ClassUtils {
+    /**
+     * Tries to create a new instance of the class based off of default constructor
+     *
+     * @param clazz The class
+     * @param <T>   Generic
+     * @return The object or null
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T tryGetInstance(Class<T> clazz) {
+        try {
+            Constructor<?> ctor = clazz.getConstructor();
+            return (T) ctor.newInstance();
+        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            return null;
+        }
+    }
+
     /**
      * Gets all the classes in a the provided package.
      *

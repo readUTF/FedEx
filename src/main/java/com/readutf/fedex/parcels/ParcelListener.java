@@ -1,7 +1,6 @@
 package com.readutf.fedex.parcels;
 
-import com.readutf.fedex.parcels.Parcel;
-
+@FunctionalInterface
 public interface ParcelListener {
 
     void onReceive(Parcel parcel);

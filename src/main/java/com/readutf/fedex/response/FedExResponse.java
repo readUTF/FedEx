@@ -8,9 +8,9 @@ import java.util.UUID;
 @Getter
 public class FedExResponse {
 
+    private final ResponseType responseType;
+    private final JsonObject responseData;
     private UUID id;
-    private ResponseType responseType;
-    private JsonObject responseData;
 
     public FedExResponse(UUID id, ResponseType responseType, JsonObject responseData) {
         this.id = id;
@@ -30,11 +30,9 @@ public class FedExResponse {
     }
 
     public enum ResponseType {
-
         SUCCESS,
         FAILED,
         TIMED_OUT
-
     }
 
 }

@@ -5,12 +5,12 @@ import lombok.Getter;
 @Getter
 public class Pair<K, V> {
 
-    public K key;
-    public V value;
+    private final K key;
+    private final V value;
 
-    public Pair(K first, V second) {
-        this.key = first;
-        this.value = second;
+    public Pair(K key, V value) {
+        this.key = key;
+        this.value = value;
     }
 
 }
