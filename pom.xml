@@ -6,7 +6,7 @@
 
     <groupId>com.readutf</groupId>
     <artifactId>fedex</artifactId>
-    <version>1.3-SNAPSHOT</version>
+    <version>1.3</version>
 
     <distributionManagement>
         <repository>
