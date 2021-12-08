@@ -8,12 +8,25 @@
     <artifactId>fedex</artifactId>
     <version>1.3.2-SNAPSHOT</version>
 
+    <organization>
+        <name>AuraSide</name>
+        <url>https://auraside.com/</url>
+    </organization>
+
+    <ciManagement>
+        <system>Jenkins CI</system>
+        <url>https://jenkins.auraside.com/</url>
+    </ciManagement>
+
     <distributionManagement>
         <repository>
-            <id>auraside</id>
-            <name>GitHub auraside Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/auraside/FedEx</url>
+            <id>auraside-nexus</id>
+            <url>https://nexus.auraside.com/repository/mpl/</url>
         </repository>
+        <snapshotRepository>
+            <id>auraside-nexus-snapshot</id>
+            <url>https://nexus.auraside.com/repository/mpl/</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <properties>
