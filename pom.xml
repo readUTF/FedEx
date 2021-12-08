@@ -49,6 +49,13 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>22.0.0</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.22</version>

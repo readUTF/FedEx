@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import gg.mpl.fedex.FedEx;
 import gg.mpl.fedex.parcels.Parcel;
 import gg.mpl.fedex.utils.Pair;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.UUID;
@@ -17,17 +18,17 @@ public final class FedExResponseParcel extends Parcel {
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "RESPONSE_PARCEL";
     }
 
     @Override
-    public JsonObject getData() {
+    public @NotNull JsonObject getData() {
         return response.getResponseData();
     }
 
     @Override
-    public FedExResponse onReceive(UUID parcelId, JsonObject data) {
+    public FedExResponse onReceive(@NotNull UUID parcelId, @NotNull JsonObject data) {
         Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
         if (responseConsumers.containsKey(parcelId)) {
             FedExResponse response = new FedExResponse(data);

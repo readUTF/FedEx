@@ -1,6 +1,8 @@
 package gg.mpl.fedex.utils;
 
 import lombok.experimental.UtilityClass;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -22,8 +24,9 @@ public final class ClassUtils {
      * @param <T>   Generic
      * @return The object or null
      */
+    @Nullable
     @SuppressWarnings("unchecked")
-    public <T> T tryGetInstance(Class<T> clazz) {
+    public <T> T tryGetInstance(@NotNull Class<T> clazz) {
         try {
             Constructor<?> ctor = clazz.getConstructor();
             return (T) ctor.newInstance();
@@ -38,9 +41,9 @@ public final class ClassUtils {
      * @return The classes in the package packageName.
      */
     //TODO: Make this not require a Plugin object.
-    public static Collection<Class<?>> getClassesInPackage(Class<?> clazz1) {
+    @NotNull
+    public static Collection<Class<?>> getClassesInPackage(@NotNull Class<?> clazz1) {
         String packageName = clazz1.getPackage().getName();
-        System.out.println(packageName);
         Collection<Class<?>> classes = new ArrayList<>();
 
         CodeSource codeSource = clazz1.getProtectionDomain().getCodeSource();

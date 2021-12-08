@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import gg.mpl.fedex.FedEx;
 import gg.mpl.fedex.response.FedExResponse;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -15,6 +16,7 @@ public abstract class Parcel {
      *
      * @return The name
      */
+    @NotNull
     public abstract String getName();
 
     /**
@@ -22,6 +24,7 @@ public abstract class Parcel {
      *
      * @return The data
      */
+    @NotNull
     public abstract JsonObject getData();
 
     /**
@@ -29,7 +32,7 @@ public abstract class Parcel {
      *
      * @return Parcel which will be sent back in response or null if no response is needed
      */
-    public abstract FedExResponse onReceive(UUID parcelId, JsonObject data);
+    public abstract FedExResponse onReceive(@NotNull UUID parcelId, @NotNull JsonObject data);
 
     /**
      * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
@@ -41,12 +44,13 @@ public abstract class Parcel {
     /**
      * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
      */
-    public final void send(Consumer<FedExResponse> responseConsumer) {
+    public final void send(@NotNull Consumer<FedExResponse> responseConsumer) {
         FedEx.getInstance().sendParcel(this, responseConsumer);
     }
 
+    @NotNull
     @Override
     public String toString() {
-        return getName() + "|" + getData().toString();
+        return getName() + "|" + getData();
     }
 }

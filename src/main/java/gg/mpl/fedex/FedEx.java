@@ -2,7 +2,6 @@ package gg.mpl.fedex;
 
 import com.google.gson.Gson;
 import gg.mpl.fedex.parcels.Parcel;
-import gg.mpl.fedex.parcels.ParcelListener;
 import gg.mpl.fedex.response.FedExResponse;
 import gg.mpl.fedex.response.FedExResponseParcel;
 import gg.mpl.fedex.response.TimeoutTask;
@@ -10,6 +9,8 @@ import gg.mpl.fedex.utils.ClassUtils;
 import gg.mpl.fedex.utils.Pair;
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -28,7 +29,7 @@ public final class FedEx {
     private final Executor executor;
     private final Map<String, Parcel> parcels = new HashMap<>();
     private final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
-    private final List<ParcelListener> parcelListeners = new ArrayList<>();
+    private final List<Consumer<Parcel>> parcelListeners = new ArrayList<>();
     private final UUID senderId;
     private final String channel;
     private final JedisPool jedisPool;
@@ -46,7 +47,7 @@ public final class FedEx {
     private Jedis publisher;
     private Jedis subscriber;
 
-    public FedEx(String channel, JedisPool jedisPool, Gson gson, Executor executor) {
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson, @NotNull Executor executor) {
         instance = this;
         this.channel = channel;
         this.jedisPool = jedisPool;
@@ -61,15 +62,15 @@ public final class FedEx {
         connect();
     }
 
-    public FedEx(String channel, JedisPool jedisPool, Gson gson) {
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson) {
         this(channel, jedisPool, gson, ForkJoinPool.commonPool());
     }
 
-    public FedEx(String channel, JedisPool jedisPool, Executor executor) {
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Executor executor) {
         this(channel, jedisPool, new Gson(), executor);
     }
 
-    public FedEx(String channel, JedisPool jedisPool) {
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool) {
         this(channel, jedisPool, new Gson(), ForkJoinPool.commonPool());
     }
 
@@ -89,10 +90,18 @@ public final class FedEx {
         jedisPool.close();
     }
 
-    public void sendParcel(UUID id, Parcel parcel, Consumer<FedExResponse> fedexResponse) {
+    /**
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param id               The id
+     * @param parcel           The parcel
+     * @param responseConsumer The response consumer
+     */
+    public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
         if (id == null) id = UUID.randomUUID();
 
-        if (fedexResponse != null) responseConsumers.put(id, new Pair<>(fedexResponse, System.currentTimeMillis()));
+        if (responseConsumer != null)
+            responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
 
         UUID finalId = id;
         executor.execute(() -> getPublisher().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId));
@@ -101,10 +110,11 @@ public final class FedEx {
     /**
      * Sends a parcel over the network
      *
+     * @param id     The id
      * @param parcel The parcel
      */
-    public void sendParcel(Parcel parcel) {
-        sendParcel(null, parcel, null);
+    public void sendParcel(@NotNull UUID id, @NotNull Parcel parcel) {
+        sendParcel(id, parcel, null);
     }
 
     /**
@@ -113,12 +123,17 @@ public final class FedEx {
      * @param parcel           The parcel
      * @param responseConsumer The response consumer
      */
-    public void sendParcel(Parcel parcel, Consumer<FedExResponse> responseConsumer) {
+    public void sendParcel(@NotNull Parcel parcel, @NotNull Consumer<FedExResponse> responseConsumer) {
         sendParcel(null, parcel, responseConsumer);
     }
 
-    public void sendParcel(UUID id, Parcel parcel) {
-        sendParcel(id, parcel, null);
+    /**
+     * Sends a parcel over the network
+     *
+     * @param parcel The parcel
+     */
+    public void sendParcel(@NotNull Parcel parcel) {
+        sendParcel(null, parcel, null);
     }
 
     /**
@@ -126,7 +141,7 @@ public final class FedEx {
      *
      * @param parcel The parcel
      */
-    public void registerParcel(Parcel parcel) {
+    public void registerParcel(@NotNull Parcel parcel) {
         parcels.put(parcel.getName(), parcel);
     }
 
@@ -135,7 +150,7 @@ public final class FedEx {
      *
      * @param parcelClass The class
      */
-    public void registerParcel(Class<? extends Parcel> parcelClass) {
+    public void registerParcel(@NotNull Class<? extends Parcel> parcelClass) {
         Parcel parcel = ClassUtils.tryGetInstance(parcelClass);
         if (parcel == null) {
             logger.warning("Parcel " + parcelClass.getName() + " could not be registered, please make a no-arg constructor.");
@@ -150,29 +165,30 @@ public final class FedEx {
      * @param mainClass The class
      */
     @SuppressWarnings("unchecked")
-    public void registerParcels(Class<?> mainClass) {
+    public void registerParcels(@NotNull Class<?> mainClass) {
         ClassUtils.getClassesInPackage(mainClass).stream().filter(Parcel.class::isAssignableFrom).forEach(clazz -> registerParcel((Class<? extends Parcel>) clazz));
     }
 
-    public void registerParcelListeners(ParcelListener... parcelListener) {
-        parcelListeners.addAll(Arrays.asList(parcelListener));
+    @SafeVarargs
+    public final void registerParcelListeners(@NotNull Consumer<Parcel>... parcelConsumers) {
+        parcelListeners.addAll(Arrays.asList(parcelConsumers));
     }
 
+    @NotNull
     public Jedis getPublisher() {
-        if (publisher == null) {
-            publisher = jedisPool.getResource();
-        }
+        if (publisher == null) publisher = jedisPool.getResource();
 
         return publisher;
     }
 
+    @NotNull
     public Jedis getSubscriber() {
         if (subscriber == null) subscriber = jedisPool.getResource();
 
         return subscriber;
     }
 
-    public void debug(String s) {
+    public void debug(@NotNull String s) {
         if (debug) logger.severe(s);
     }
 }

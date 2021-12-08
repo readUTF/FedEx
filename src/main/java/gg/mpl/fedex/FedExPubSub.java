@@ -5,17 +5,16 @@ import com.google.gson.JsonParser;
 import gg.mpl.fedex.parcels.Parcel;
 import gg.mpl.fedex.response.FedExResponse;
 import gg.mpl.fedex.response.FedExResponseParcel;
+import lombok.AllArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.UUID;
 
+@AllArgsConstructor
 final class FedExPubSub extends JedisPubSub {
-
+    @NotNull
     private final FedEx fedEx;
-
-    public FedExPubSub(FedEx fedEx) {
-        this.fedEx = fedEx;
-    }
 
     @Override
     public void onMessage(String channel, String message) {
@@ -30,8 +29,7 @@ final class FedExPubSub extends JedisPubSub {
             JsonObject jsonObject = JsonParser.parseString(split[2]).getAsJsonObject();
             UUID parcelId = UUID.fromString(split[3]);
 
-            if (fedEx.getSenderId().equals(senderId))
-                return;
+            if (fedEx.getSenderId().equals(senderId)) return;
 
             if (fedEx.getParcels().containsKey(name)) {
                 Parcel parcelHandler = fedEx.getParcels().get(name);
