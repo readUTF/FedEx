@@ -1,8 +1,8 @@
-package com.readutf.fedex.parcels;
+package gg.mpl.fedex.parcels;
 
 import com.google.gson.JsonObject;
-import com.readutf.fedex.FedEx;
-import com.readutf.fedex.response.FedExResponse;
+import gg.mpl.fedex.FedEx;
+import gg.mpl.fedex.response.FedExResponse;
 import lombok.Getter;
 
 import java.util.UUID;
@@ -10,7 +10,6 @@ import java.util.function.Consumer;
 
 @Getter
 public abstract class Parcel {
-
     /**
      * Gets the name of this parcel, used to determine which parcel is which in messaging
      *

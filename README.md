@@ -18,8 +18,8 @@ To get started, create a new class that extends Parcel. Below is an example of w
 package com.example.net;
 
 import com.google.gson.JsonObject;
-import com.readutf.fedex.parcels.Parcel;
-import com.readutf.fedex.response.FedExResponse;
+import Parcel;
+import FedExResponse;
 
 import java.util.UUID;
 

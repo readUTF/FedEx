@@ -1,15 +1,15 @@
-package com.readutf.fedex;
+package gg.mpl.fedex;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.readutf.fedex.parcels.Parcel;
-import com.readutf.fedex.response.FedExResponse;
-import com.readutf.fedex.response.FedExResponseParcel;
+import gg.mpl.fedex.parcels.Parcel;
+import gg.mpl.fedex.response.FedExResponse;
+import gg.mpl.fedex.response.FedExResponseParcel;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.UUID;
 
-class FedExPubSub extends JedisPubSub {
+final class FedExPubSub extends JedisPubSub {
 
     private final FedEx fedEx;
 

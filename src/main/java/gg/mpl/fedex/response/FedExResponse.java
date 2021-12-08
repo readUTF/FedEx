@@ -1,4 +1,4 @@
-package com.readutf.fedex.response;
+package gg.mpl.fedex.response;
 
 import com.google.gson.JsonObject;
 import lombok.Getter;
@@ -6,8 +6,7 @@ import lombok.Getter;
 import java.util.UUID;
 
 @Getter
-public class FedExResponse {
-
+public final class FedExResponse {
     private final ResponseType responseType;
     private final JsonObject responseData;
     private UUID id;
@@ -29,10 +28,10 @@ public class FedExResponse {
         return responseData;
     }
 
+    @SuppressWarnings("unused")
     public enum ResponseType {
         SUCCESS,
         FAILED,
         TIMED_OUT
     }
-
 }

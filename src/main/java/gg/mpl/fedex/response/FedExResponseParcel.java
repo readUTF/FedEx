@@ -1,16 +1,15 @@
-package com.readutf.fedex.response;
+package gg.mpl.fedex.response;
 
 import com.google.gson.JsonObject;
-import com.readutf.fedex.FedEx;
-import com.readutf.fedex.parcels.Parcel;
-import com.readutf.fedex.utils.Pair;
+import gg.mpl.fedex.FedEx;
+import gg.mpl.fedex.parcels.Parcel;
+import gg.mpl.fedex.utils.Pair;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public class FedExResponseParcel extends Parcel {
-
+public final class FedExResponseParcel extends Parcel {
     private final FedExResponse response;
 
     public FedExResponseParcel(FedExResponse fedExResponse) {
@@ -32,9 +31,11 @@ public class FedExResponseParcel extends Parcel {
         Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
         if (responseConsumers.containsKey(parcelId)) {
             FedExResponse response = new FedExResponse(data);
+
             responseConsumers.get(parcelId).getKey().accept(response);
             responseConsumers.remove(parcelId);
         }
+
         return null;
     }
 }

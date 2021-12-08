@@ -1,19 +1,22 @@
-package com.readutf.fedex.response;
+package gg.mpl.fedex.response;
 
 import com.google.gson.JsonObject;
-import com.readutf.fedex.FedEx;
-import com.readutf.fedex.utils.Pair;
+import gg.mpl.fedex.FedEx;
+import gg.mpl.fedex.utils.Pair;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 
-public class TimeoutTask extends Thread {
-
+public final class TimeoutTask extends Thread {
     public TimeoutTask() {
         setDaemon(true);
     }
 
     @Override
+    @SuppressWarnings("BusyWait")
     public void run() {
         while (FedEx.getInstance().isActive()) {
             List<UUID> toRemove = new ArrayList<>();
@@ -21,7 +24,7 @@ public class TimeoutTask extends Thread {
             for (Map.Entry<UUID, Pair<Consumer<FedExResponse>, Long>> entry : responseConsumers.entrySet()) {
                 UUID uuid = entry.getKey();
                 Pair<Consumer<FedExResponse>, Long> responseConsumerAndTimestamp = entry.getValue();
-                if(System.currentTimeMillis() - responseConsumerAndTimestamp.getValue() > 3000) {
+                if (System.currentTimeMillis() - responseConsumerAndTimestamp.getValue() > 3000) {
                     responseConsumerAndTimestamp.getKey().accept(new FedExResponse(uuid, FedExResponse.ResponseType.TIMED_OUT, new JsonObject()));
                 }
 

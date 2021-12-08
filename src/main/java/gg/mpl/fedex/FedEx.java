@@ -1,13 +1,13 @@
-package com.readutf.fedex;
+package gg.mpl.fedex;
 
 import com.google.gson.Gson;
-import com.readutf.fedex.parcels.Parcel;
-import com.readutf.fedex.parcels.ParcelListener;
-import com.readutf.fedex.response.FedExResponse;
-import com.readutf.fedex.response.FedExResponseParcel;
-import com.readutf.fedex.response.TimeoutTask;
-import com.readutf.fedex.utils.ClassUtils;
-import com.readutf.fedex.utils.Pair;
+import gg.mpl.fedex.parcels.Parcel;
+import gg.mpl.fedex.parcels.ParcelListener;
+import gg.mpl.fedex.response.FedExResponse;
+import gg.mpl.fedex.response.FedExResponseParcel;
+import gg.mpl.fedex.response.TimeoutTask;
+import gg.mpl.fedex.utils.ClassUtils;
+import gg.mpl.fedex.utils.Pair;
 import lombok.Getter;
 import lombok.Setter;
 import redis.clients.jedis.Jedis;
@@ -21,8 +21,7 @@ import java.util.logging.Logger;
 
 @Getter
 @SuppressWarnings("unused")
-public class FedEx {
-
+public final class FedEx {
     @Getter
     private static FedEx instance;
 
@@ -39,6 +38,7 @@ public class FedEx {
     private final Logger logger = Logger.getLogger("FedEx");
 
     private boolean active;
+
     @Setter
     private boolean debug = false;
 
@@ -90,15 +90,12 @@ public class FedEx {
     }
 
     public void sendParcel(UUID id, Parcel parcel, Consumer<FedExResponse> fedexResponse) {
-        if (id == null)
-            id = UUID.randomUUID();
+        if (id == null) id = UUID.randomUUID();
 
-        if (fedexResponse != null)
-            responseConsumers.put(id, new Pair<>(fedexResponse, System.currentTimeMillis()));
+        if (fedexResponse != null) responseConsumers.put(id, new Pair<>(fedexResponse, System.currentTimeMillis()));
 
         UUID finalId = id;
-        executor.execute(() ->
-                getPublisher().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId));
+        executor.execute(() -> getPublisher().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId));
     }
 
     /**
@@ -154,10 +151,7 @@ public class FedEx {
      */
     @SuppressWarnings("unchecked")
     public void registerParcels(Class<?> mainClass) {
-        ClassUtils.getClassesInPackage(mainClass)
-                .stream()
-                .filter(Parcel.class::isAssignableFrom)
-                .forEach(clazz -> registerParcel((Class<? extends Parcel>) clazz));
+        ClassUtils.getClassesInPackage(mainClass).stream().filter(Parcel.class::isAssignableFrom).forEach(clazz -> registerParcel((Class<? extends Parcel>) clazz));
     }
 
     public void registerParcelListeners(ParcelListener... parcelListener) {
@@ -173,8 +167,7 @@ public class FedEx {
     }
 
     public Jedis getSubscriber() {
-        if (subscriber == null)
-            subscriber = jedisPool.getResource();
+        if (subscriber == null) subscriber = jedisPool.getResource();
 
         return subscriber;
     }

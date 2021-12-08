@@ -1,4 +1,4 @@
-package com.readutf.fedex.utils;
+package gg.mpl.fedex.utils;
 
 import lombok.experimental.UtilityClass;
 
@@ -33,7 +33,7 @@ public final class ClassUtils {
     }
 
     /**
-     * Gets all the classes in a the provided package.
+     * Gets all the classes in the provided package.
      *
      * @return The classes in the package packageName.
      */
@@ -90,5 +90,4 @@ public final class ClassUtils {
 
         return classes;
     }
-
 }
