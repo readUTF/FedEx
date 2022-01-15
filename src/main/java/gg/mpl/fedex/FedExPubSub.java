@@ -26,7 +26,7 @@ final class FedExPubSub extends JedisPubSub {
             }
             UUID senderId = UUID.fromString(split[0]);
             String name = split[1];
-            JsonObject jsonObject = JsonParser.parseString(split[2]).getAsJsonObject();
+            JsonObject jsonObject = new JsonParser().parse(split[2]).getAsJsonObject();
             UUID parcelId = UUID.fromString(split[3]);
 
             if (fedEx.getSenderId().equals(senderId)) return;
