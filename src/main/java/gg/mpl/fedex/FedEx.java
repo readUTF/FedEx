@@ -74,9 +74,7 @@ public final class FedEx {
         active = true;
 
         executor.execute(() -> {
-            Jedis resource = jedisPool.getResource();
-            resource.subscribe(pubSub = new FedExPubSub(this), channel);
-            jedisPool.returnResource(resource);
+            jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel);
         });
         timeoutTask.start();
     }
