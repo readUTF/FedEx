@@ -8,6 +8,7 @@ import java.util.UUID;
 
 @Getter
 public final class FedExResponse {
+
     private final ResponseType responseType;
     private final JsonObject responseData;
     private UUID id;
