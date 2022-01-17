@@ -34,7 +34,6 @@ public final class FedEx {
     private final String channel;
     private final JedisPool jedisPool;
     private final Gson gson;
-    private final Jedis jedis;
     private final TimeoutTask timeoutTask;
     private final Logger logger = Logger.getLogger("FedEx");
 
@@ -44,8 +43,6 @@ public final class FedEx {
     private boolean debug = false;
 
     private FedExPubSub pubSub;
-    private Jedis publisher;
-    private Jedis subscriber;
 
     public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson, @NotNull Executor executor) {
         instance = this;
@@ -54,7 +51,6 @@ public final class FedEx {
         this.gson = gson;
         this.executor = executor;
 
-        jedis = jedisPool.getResource();
         timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
 
@@ -77,7 +73,11 @@ public final class FedEx {
     public void connect() {
         active = true;
 
-        executor.execute(() -> getSubscriber().subscribe(pubSub = new FedExPubSub(this), channel));
+        executor.execute(() -> {
+            Jedis resource = jedisPool.getResource();
+            resource.subscribe(pubSub = new FedExPubSub(this), channel);
+            jedisPool.returnResource(resource);
+        });
         timeoutTask.start();
     }
 
@@ -104,7 +104,11 @@ public final class FedEx {
             responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
 
         UUID finalId = id;
-        executor.execute(() -> getPublisher().publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId));
+        executor.execute(() -> {
+            Jedis resource = getJedisPool().getResource();
+            resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData().toString() + ";" + finalId);
+            jedisPool.returnResource(resource);
+        });
     }
 
     /**
@@ -174,19 +178,7 @@ public final class FedEx {
         parcelListeners.addAll(Arrays.asList(parcelConsumers));
     }
 
-    @NotNull
-    public Jedis getPublisher() {
-        if (publisher == null) publisher = jedisPool.getResource();
 
-        return publisher;
-    }
-
-    @NotNull
-    public Jedis getSubscriber() {
-        if (subscriber == null) subscriber = jedisPool.getResource();
-
-        return subscriber;
-    }
 
     public void debug(@NotNull String s) {
         if (debug) logger.severe(s);
