@@ -106,7 +106,7 @@ public final class FedEx {
             Jedis resource = getJedisPool().getResource();
             System.out.println("sent parcel: " + parcel.getName());
             resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
-//            jedisPool.returnResource(resource);
+            jedisPool.returnResource(resource);
             System.out.println("");
         });
     }
