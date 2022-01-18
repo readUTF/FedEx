@@ -73,9 +73,11 @@ public final class FedEx {
     public void connect() {
         active = true;
 
-        executor.execute(() -> {
+        new Thread(() -> {
             jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel);
-        });
+        }).start();
+
+
         timeoutTask.start();
     }
 
@@ -106,14 +108,14 @@ public final class FedEx {
         logger.severe("it");
 
         UUID finalId = id;
-        executor.execute(() -> {
+        new Thread(() -> {
             logger.severe("send");
             FedEx.getInstance().getLogger().severe("sending parcel: " + parcel.getName());
             Jedis resource = getJedisPool().getResource();
             resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
             jedisPool.returnResource(resource);
             FedEx.getInstance().getLogger().severe("sent parcel: " + parcel.getName());
-        });
+        }).start();
     }
 
     /**
