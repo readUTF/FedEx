@@ -35,7 +35,7 @@ public final class FedEx {
     private final JedisPool jedisPool;
     private final Gson gson;
     private final TimeoutTask timeoutTask;
-    private final Logger logger = Logger.getLogger("FedEx");
+    private Logger logger = Logger.getLogger("FedEx");
 
     private boolean active;
 
@@ -44,7 +44,7 @@ public final class FedEx {
 
     private FedExPubSub pubSub;
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson, @NotNull Executor executor) {
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson, @NotNull Executor executor, Logger logger) {
         instance = this;
         this.channel = channel;
         this.jedisPool = jedisPool;
@@ -59,15 +59,15 @@ public final class FedEx {
     }
 
     public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson) {
-        this(channel, jedisPool, gson, ForkJoinPool.commonPool());
+        this(channel, jedisPool, gson, ForkJoinPool.commonPool(), Logger.getLogger("FedEx"));
     }
 
     public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Executor executor) {
-        this(channel, jedisPool, new Gson(), executor);
+        this(channel, jedisPool, new Gson(), executor, Logger.getLogger("FedEx"));
     }
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool) {
-        this(channel, jedisPool, new Gson(), ForkJoinPool.commonPool());
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, Logger logger) {
+        this(channel, jedisPool, new Gson(), ForkJoinPool.commonPool(), logger);
     }
 
     public void connect() {
@@ -96,6 +96,7 @@ public final class FedEx {
      * @param responseConsumer The response consumer
      */
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
+
         if (id == null) id = UUID.randomUUID();
 
         if (responseConsumer != null)
