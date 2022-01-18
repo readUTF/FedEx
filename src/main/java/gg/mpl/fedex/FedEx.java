@@ -97,13 +97,17 @@ public final class FedEx {
      */
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
 
+        logger.severe("why");
         if (id == null) id = UUID.randomUUID();
+        logger.severe("wont");
 
         if (responseConsumer != null)
             responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
+        logger.severe("it");
 
         UUID finalId = id;
         executor.execute(() -> {
+            logger.severe("send");
             FedEx.getInstance().getLogger().severe("sending parcel: " + parcel.getName());
             Jedis resource = getJedisPool().getResource();
             resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
