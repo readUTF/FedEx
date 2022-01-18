@@ -21,7 +21,7 @@ final class FedExPubSub extends JedisPubSub {
         try {
             String[] split = message.split(";");
             if (split.length < 4) {
-                System.out.println("invalid parcel received.");
+                FedEx.getInstance().getLogger().severe("invalid parcel received.");
                 return;
             }
             UUID senderId = UUID.fromString(split[0]);
@@ -31,7 +31,7 @@ final class FedExPubSub extends JedisPubSub {
 
             if (fedEx.getSenderId().equals(senderId)) return;
 
-            System.out.println("received command");
+            FedEx.getInstance().getLogger().severe("received command");
 
             if (fedEx.getParcels().containsKey(name)) {
                 Parcel parcelHandler = fedEx.getParcels().get(name);
@@ -42,7 +42,7 @@ final class FedExPubSub extends JedisPubSub {
                 }
             }
         } catch (Exception e) {
-            System.out.println("Failed to handle redis message");
+            FedEx.getInstance().getLogger().severe("Failed to handle redis message");
             e.printStackTrace();
         }
     }

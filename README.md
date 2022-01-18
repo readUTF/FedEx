@@ -45,7 +45,7 @@ public class ExampleParcel extends Parcel {
 
     @Override
     public FedExResponse onReceive(UUID parcelId, JsonObject jsonObject) {
-        System.out.println(jsonObject.get("message").getAsString());
+        FedEx.getInstance().getLogger().severe(jsonObject.get("message").getAsString());
         return new FedExResponse(parcelId, FedExResponse.ResponseType.SUCCESS, new JsonObject());
     }
 }
@@ -62,7 +62,7 @@ fedEx.registerParcels(ExampleParcel.class);
 Sending a parcel invoels creating an instance of the parcel, and handing any response received back. By default if no response is received the parcel Consumer will respond with a time out ResponseType. However, if no response is expected this can be ignored.
 
 ```java
-fedEx.sendParcel(new ExampleParcel("test"), fedExResponse -> System.out.println("example parcel sent successfully"));
+fedEx.sendParcel(new ExampleParcel("test"), fedExResponse -> FedEx.getInstance().getLogger().severe("example parcel sent successfully"));
 ```
 Custom data sent back can be access in the fedexResponse consumer.
 

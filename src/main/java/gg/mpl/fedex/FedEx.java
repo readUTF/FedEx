@@ -103,11 +103,11 @@ public final class FedEx {
 
         UUID finalId = id;
         executor.execute(() -> {
-            System.out.println("sending parcel: " + parcel.getName());
+            FedEx.getInstance().getLogger().severe("sending parcel: " + parcel.getName());
             Jedis resource = getJedisPool().getResource();
             resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
             jedisPool.returnResource(resource);
-            System.out.println("sent parcel: " + parcel.getName());
+            FedEx.getInstance().getLogger().severe("sent parcel: " + parcel.getName());
         });
     }
 
