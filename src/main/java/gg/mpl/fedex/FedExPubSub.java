@@ -31,7 +31,7 @@ final class FedExPubSub extends JedisPubSub {
 
             if (fedEx.getSenderId().equals(senderId)) return;
 
-            FedEx.getInstance().getLogger().severe("received command");
+            FedEx.getInstance().getLogger().severe("received command " + name);
 
             if (fedEx.getParcels().containsKey(name)) {
                 Parcel parcelHandler = fedEx.getParcels().get(name);
