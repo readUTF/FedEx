@@ -12,10 +12,7 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.redisson.Redisson;
-import org.redisson.api.RTopic;
-import org.redisson.api.RedissonClient;
-import org.redisson.api.RedissonReactiveClient;
-import org.redisson.api.RedissonRxClient;
+import org.redisson.api.*;
 import org.redisson.config.Config;
 
 import java.util.*;
@@ -38,9 +35,7 @@ public final class FedEx {
     private final String channel;
     private final Gson gson;
     private final TimeoutTask timeoutTask;
-    RedissonClient redisson;
-    RedissonRxClient redissonRx;
-    RedissonReactiveClient reactiveClient;
+    private final RedissonClient redisson;
     private Logger logger = Logger.getLogger("FedEx");
 
     private boolean active;
@@ -56,8 +51,6 @@ public final class FedEx {
         this.gson = gson;
         this.executor = executor;
         this.redisson = Redisson.create(redisConfig);
-        this.reactiveClient = redisson.reactive();
-        this.redissonRx = redisson.rxJava();
 
         timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
@@ -186,8 +179,6 @@ public final class FedEx {
     public final void registerParcelListeners(@NotNull Consumer<Parcel>... parcelConsumers) {
         parcelListeners.addAll(Arrays.asList(parcelConsumers));
     }
-
-
     public void debug(@NotNull String s) {
         if (debug) logger.severe(s);
     }
