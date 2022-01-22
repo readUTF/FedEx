@@ -11,8 +11,12 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import org.redisson.Redisson;
+import org.redisson.api.RTopic;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.RedissonReactiveClient;
+import org.redisson.api.RedissonRxClient;
+import org.redisson.config.Config;
 
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -32,9 +36,11 @@ public final class FedEx {
     private final List<Consumer<Parcel>> parcelListeners = new ArrayList<>();
     private final UUID senderId;
     private final String channel;
-    private final JedisPool jedisPool;
     private final Gson gson;
     private final TimeoutTask timeoutTask;
+    RedissonClient redisson;
+    RedissonRxClient redissonRx;
+    RedissonReactiveClient reactiveClient;
     private Logger logger = Logger.getLogger("FedEx");
 
     private boolean active;
@@ -44,12 +50,14 @@ public final class FedEx {
 
     private FedExPubSub pubSub;
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson, @NotNull Executor executor, Logger logger) {
+    public FedEx(@NotNull String channel, @NotNull Config redisConfig, @NotNull Gson gson, @NotNull Executor executor, Logger logger) {
         instance = this;
         this.channel = channel;
-        this.jedisPool = jedisPool;
         this.gson = gson;
         this.executor = executor;
+        this.redisson = Redisson.create(redisConfig);
+        this.reactiveClient = redisson.reactive();
+        this.redissonRx = redisson.rxJava();
 
         timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
@@ -58,23 +66,25 @@ public final class FedEx {
         connect();
     }
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson) {
-        this(channel, jedisPool, gson, ForkJoinPool.commonPool(), Logger.getLogger("FedEx"));
+    public FedEx(@NotNull String channel, @NotNull Config redisConfig, @NotNull Gson gson) {
+        this(channel, redisConfig, gson, ForkJoinPool.commonPool(), Logger.getLogger("FedEx"));
     }
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Executor executor) {
-        this(channel, jedisPool, new Gson(), executor, Logger.getLogger("FedEx"));
+    public FedEx(@NotNull String channel, @NotNull Config redisConfig, @NotNull Executor executor) {
+        this(channel, redisConfig, new Gson(), executor, Logger.getLogger("FedEx"));
     }
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, Logger logger) {
-        this(channel, jedisPool, new Gson(), ForkJoinPool.commonPool(), logger);
+    public FedEx(@NotNull String channel, @NotNull Config redisConfig, Logger logger) {
+        this(channel, redisConfig, new Gson(), ForkJoinPool.commonPool(), logger);
     }
 
     public void connect() {
         active = true;
 
         new Thread(() -> {
-            jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel);
+            RTopic rTopic = redisson.getTopic(channel);
+            rTopic.addListener(String.class, pubSub = new FedExPubSub(this));
+//            jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel);
         }).start();
 
 
@@ -83,11 +93,7 @@ public final class FedEx {
 
     public void close() {
         active = false;
-        if (pubSub != null && pubSub.isSubscribed()) {
-            pubSub.unsubscribe();
-        }
-
-        jedisPool.close();
+        redisson.shutdown();
     }
 
     /**
@@ -108,9 +114,8 @@ public final class FedEx {
         UUID finalId = id;
         new Thread(() -> {
             FedEx.getInstance().getLogger().severe("sending parcel: " + parcel.getName());
-            Jedis resource = getJedisPool().getResource();
-            resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
-            jedisPool.returnResource(resource);
+            RTopic topic = redisson.getTopic(channel);
+            topic.publish(senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
             FedEx.getInstance().getLogger().severe("sent parcel: " + parcel.getName());
         }).start();
     }
@@ -181,7 +186,6 @@ public final class FedEx {
     public final void registerParcelListeners(@NotNull Consumer<Parcel>... parcelConsumers) {
         parcelListeners.addAll(Arrays.asList(parcelConsumers));
     }
-
 
 
     public void debug(@NotNull String s) {

@@ -7,17 +7,18 @@ import gg.mpl.fedex.response.FedExResponse;
 import gg.mpl.fedex.response.FedExResponseParcel;
 import lombok.AllArgsConstructor;
 import org.jetbrains.annotations.NotNull;
-import redis.clients.jedis.JedisPubSub;
+import org.redisson.api.listener.MessageListener;
 
 import java.util.UUID;
 
 @AllArgsConstructor
-final class FedExPubSub extends JedisPubSub {
+final class FedExPubSub implements MessageListener<String> {
+
     @NotNull
     private final FedEx fedEx;
 
     @Override
-    public void onMessage(String channel, String message) {
+    public void onMessage(CharSequence charSequence, String message) {
         try {
             String[] split = message.split(";");
             if (split.length < 4) {
