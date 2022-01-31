@@ -19,7 +19,6 @@ final class FedExPubSub implements MessageListener<String> {
 
     @Override
     public void onMessage(CharSequence charSequence, String message) {
-        System.out.println(message);
         try {
             String[] split = message.split(";");
             if (split.length < 4) {
