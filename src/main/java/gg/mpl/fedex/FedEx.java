@@ -107,11 +107,9 @@ public final class FedEx {
 
         UUID finalId = id;
         new Thread(() -> {
-            FedEx.getInstance().getLogger().severe("sending parcel: " + parcel.getName());
             Jedis resource = getJedisPool().getResource();
             resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
             jedisPool.returnResource(resource);
-            FedEx.getInstance().getLogger().severe("sent parcel: " + parcel.getName());
         }).start();
     }
 
@@ -180,11 +178,5 @@ public final class FedEx {
     @SafeVarargs
     public final void registerParcelListeners(@NotNull Consumer<Parcel>... parcelConsumers) {
         parcelListeners.addAll(Arrays.asList(parcelConsumers));
-    }
-
-
-
-    public void debug(@NotNull String s) {
-        if (debug) logger.severe(s);
     }
 }

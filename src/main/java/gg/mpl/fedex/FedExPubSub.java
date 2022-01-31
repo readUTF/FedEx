@@ -19,7 +19,6 @@ final class FedExPubSub extends JedisPubSub {
     @Override
     public void onMessage(String channel, String message) {
         try {
-            System.out.println(message);
             String[] split = message.split(";");
             if (split.length < 4) {
                 FedEx.getInstance().getLogger().severe("invalid parcel received.");
