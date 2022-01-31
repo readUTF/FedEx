@@ -7,7 +7,6 @@ import gg.mpl.fedex.response.FedExResponseParcel;
 import gg.mpl.fedex.response.TimeoutTask;
 import gg.mpl.fedex.utils.ClassUtils;
 import gg.mpl.fedex.utils.Pair;
-import gg.mpl.fedex.utils.RedissonQuick;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -57,7 +56,6 @@ public final class FedEx {
         senderId = UUID.randomUUID();
 
         registerParcel(new FedExResponseParcel(null));
-        new RedissonQuick(redisson);
         connect();
     }
 
