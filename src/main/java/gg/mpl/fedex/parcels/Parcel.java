@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import gg.mpl.fedex.FedEx;
 import gg.mpl.fedex.response.FedExResponse;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -27,6 +28,7 @@ public abstract class Parcel {
     @NotNull
     public abstract JsonObject getData();
 
+
     /**
      * Called when this parcel is received
      *
@@ -47,6 +49,9 @@ public abstract class Parcel {
     public final void send(@NotNull Consumer<FedExResponse> responseConsumer) {
         FedEx.getInstance().sendParcel(this, responseConsumer);
     }
+
+    @Getter @Setter
+    private boolean selfRun = false;
 
     @NotNull
     @Override

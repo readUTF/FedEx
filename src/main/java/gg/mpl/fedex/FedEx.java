@@ -19,14 +19,17 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 @Getter
 @SuppressWarnings("unused")
 public final class FedEx {
+
+    HashMap<String, FedEx> fedExByChannel = new HashMap<>();
+
     @Getter
     private static FedEx instance;
 
-    private final Executor executor;
     private final Map<String, Parcel> parcels = new HashMap<>();
     private final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
     private final List<Consumer<Parcel>> parcelListeners = new ArrayList<>();
@@ -38,18 +41,18 @@ public final class FedEx {
     private Logger logger = Logger.getLogger("FedEx");
 
     private boolean active;
+    Thread poolThread;
 
     @Setter
     private boolean debug = false;
 
     private FedExPubSub pubSub;
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson, @NotNull Executor executor, Logger logger) {
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool) {
         instance = this;
         this.channel = channel;
         this.jedisPool = jedisPool;
-        this.gson = gson;
-        this.executor = executor;
+        this.gson = new Gson();
 
         timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
@@ -58,36 +61,25 @@ public final class FedEx {
         connect();
     }
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Gson gson) {
-        this(channel, jedisPool, gson, ForkJoinPool.commonPool(), Logger.getLogger("FedEx"));
-    }
-
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, @NotNull Executor executor) {
-        this(channel, jedisPool, new Gson(), executor, Logger.getLogger("FedEx"));
-    }
-
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, Logger logger) {
-        this(channel, jedisPool, new Gson(), ForkJoinPool.commonPool(), logger);
-    }
-
     public void connect() {
         active = true;
-
-        new Thread(() -> {
-            jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel);
-        }).start();
+        poolThread = new Thread(() -> jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel));
+        poolThread.start();
 
 
-        timeoutTask.start();
+//        timeoutTask.start();
     }
 
     public void close() {
+        System.out.println("fedex closed");
         active = false;
         if (pubSub != null && pubSub.isSubscribed()) {
             pubSub.unsubscribe();
         }
+        poolThread.interrupt();
 
         jedisPool.close();
+        instance = null;
     }
 
     /**
@@ -98,8 +90,6 @@ public final class FedEx {
      * @param responseConsumer The response consumer
      */
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
-
-
         if (id == null) id = UUID.randomUUID();
 
         if (responseConsumer != null)
@@ -161,6 +151,7 @@ public final class FedEx {
         if (parcel == null) {
             logger.warning("Parcel " + parcelClass.getName() + " could not be registered, please make a no-arg constructor.");
         } else {
+            logger.warning("Parcel " + parcelClass.getSimpleName() + " has been registered.");
             parcels.put(parcel.getName(), parcel);
         }
     }
@@ -176,7 +167,17 @@ public final class FedEx {
     }
 
     @SafeVarargs
+    public final void registerParcels(Class<? extends Parcel>... classes) {
+        Stream.of(classes).forEach(this::registerParcel);
+    }
+
+    @SafeVarargs
     public final void registerParcelListeners(@NotNull Consumer<Parcel>... parcelConsumers) {
         parcelListeners.addAll(Arrays.asList(parcelConsumers));
     }
+
+    public void debug(Object s) {
+        if(debug) System.out.println(s);
+    }
+
 }
