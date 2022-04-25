@@ -42,7 +42,7 @@ final class FedExPubSub extends JedisPubSub {
             if (fedEx.getParcels().containsKey(name)) {
                 FedEx.getInstance().debug("Found parcel handler");
                 Parcel parcelHandler = fedEx.getParcels().get(name);
-                if (fedEx.getSenderId().equals(senderId) && !parcelHandler.isSelfRun()) return;
+                if (fedEx.getSenderId().equals(senderId)) return;
                 FedEx.getInstance().debug("Parcel Handled");
                 FedExResponse fedExResponse = parcelHandler.onReceive(parcelId, jsonObject);
 

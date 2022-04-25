@@ -16,6 +16,8 @@ import redis.clients.jedis.JedisPool;
 
 import java.util.*;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -37,6 +39,7 @@ public final class FedEx {
     private final String channel;
     private final JedisPool jedisPool;
     private final Gson gson;
+    private final ExecutorService executor = Executors.newCachedThreadPool();
     private final TimeoutTask timeoutTask;
     private Logger logger = Logger.getLogger("FedEx");
 
@@ -56,6 +59,7 @@ public final class FedEx {
 
         timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
+
 
         registerParcel(new FedExResponseParcel(null));
         connect();
@@ -96,11 +100,14 @@ public final class FedEx {
             responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
 
         UUID finalId = id;
-        new Thread(() -> {
+        if(parcel.isSelfRun()) {
+            parcels.get(parcel.getName()).onReceive(id, parcel.getData());
+        }
+        executor.submit(() -> {
             Jedis resource = getJedisPool().getResource();
             resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
             jedisPool.returnResource(resource);
-        }).start();
+        });
     }
 
     /**
@@ -149,9 +156,9 @@ public final class FedEx {
     public void registerParcel(@NotNull Class<? extends Parcel> parcelClass) {
         Parcel parcel = ClassUtils.tryGetInstance(parcelClass);
         if (parcel == null) {
-            logger.warning("Parcel " + parcelClass.getName() + " could not be registered, please make a no-arg constructor.");
+            logger.warning("[FedEx] Parcel " + parcelClass.getName() + " could not be registered, please make a no-arg constructor.");
         } else {
-            logger.warning("Parcel " + parcelClass.getSimpleName() + " has been registered.");
+            logger.warning("[FedEx] Parcel " + parcelClass.getSimpleName() + " has been registered.");
             parcels.put(parcel.getName(), parcel);
         }
     }
