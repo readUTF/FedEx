@@ -5,7 +5,6 @@ import lombok.SneakyThrows;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-import java.util.HashMap;
 import java.util.function.Consumer;
 
 public class JedisQuick {
