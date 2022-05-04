@@ -1,6 +1,8 @@
 package gg.mpl.fedex;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import gg.mpl.fedex.listener.ParcelListener;
 import gg.mpl.fedex.parcels.Parcel;
 import gg.mpl.fedex.response.FedExResponse;
 import gg.mpl.fedex.response.FedExResponseParcel;
@@ -19,6 +21,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -27,20 +30,17 @@ import java.util.stream.Stream;
 @SuppressWarnings("unused")
 public final class FedEx {
 
-    HashMap<String, FedEx> fedExByChannel = new HashMap<>();
+    @Deprecated @Getter private static FedEx instance;
 
     @Getter
-    private static FedEx instance;
-
+    private static final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
     private final Map<String, Parcel> parcels = new HashMap<>();
-    private final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
-    private final List<Consumer<Parcel>> parcelListeners = new ArrayList<>();
+    private final List<ParcelListener> parcelListeners;
     private final UUID senderId;
     private final String channel;
     private final JedisPool jedisPool;
     private final Gson gson;
     private final ExecutorService executor = Executors.newCachedThreadPool();
-    private final TimeoutTask timeoutTask;
     private Logger logger = Logger.getLogger("FedEx");
 
     private boolean active;
@@ -57,9 +57,8 @@ public final class FedEx {
         this.jedisPool = jedisPool;
         this.gson = new Gson();
 
-        timeoutTask = new TimeoutTask();
         senderId = UUID.randomUUID();
-
+        parcelListeners = new ArrayList<>();
 
         registerParcel(new FedExResponseParcel(null));
         connect();
@@ -69,6 +68,7 @@ public final class FedEx {
         active = true;
         poolThread = new Thread(() -> jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel));
         poolThread.start();
+        new TimeoutTask(new Timer(), this);
 
 
 //        timeoutTask.start();
@@ -83,7 +83,6 @@ public final class FedEx {
         poolThread.interrupt();
 
         jedisPool.close();
-        instance = null;
     }
 
     /**
@@ -100,8 +99,8 @@ public final class FedEx {
             responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
 
         UUID finalId = id;
-        if(parcel.isSelfRun()) {
-            parcels.get(parcel.getName()).onReceive(id, parcel.getData());
+        if (parcel.isSelfRun()) {
+            parcels.get(parcel.getName()).onReceive(channel, id, parcel.getData());
         }
         executor.submit(() -> {
             Jedis resource = getJedisPool().getResource();
@@ -179,12 +178,12 @@ public final class FedEx {
     }
 
     @SafeVarargs
-    public final void registerParcelListeners(@NotNull Consumer<Parcel>... parcelConsumers) {
-        parcelListeners.addAll(Arrays.asList(parcelConsumers));
+    public final void registerParcelListeners(@NotNull ParcelListener... parcelListeners) {
+        this.parcelListeners.addAll(Arrays.asList(parcelListeners));
     }
 
     public void debug(Object s) {
-        if(debug) System.out.println(s);
+        if (debug) System.out.println(s);
     }
 
 }

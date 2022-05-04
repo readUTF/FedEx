@@ -28,8 +28,8 @@ public final class FedExResponseParcel extends Parcel {
     }
 
     @Override
-    public FedExResponse onReceive(@NotNull UUID parcelId, @NotNull JsonObject data) {
-        Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getInstance().getResponseConsumers();
+    public FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull JsonObject data) {
+        Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getResponseConsumers();
         if (responseConsumers.containsKey(parcelId)) {
             FedExResponse response = new FedExResponse(data);
 

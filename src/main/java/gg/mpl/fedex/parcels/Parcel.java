@@ -34,20 +34,20 @@ public abstract class Parcel {
      *
      * @return Parcel which will be sent back in response or null if no response is needed
      */
-    public abstract FedExResponse onReceive(@NotNull UUID parcelId, @NotNull JsonObject data);
+    public abstract FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull JsonObject data);
 
     /**
      * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
      */
-    public final void send() {
-        FedEx.getInstance().sendParcel(this);
+    public final void send(FedEx fedEx) {
+        fedEx.sendParcel(this);
     }
 
     /**
      * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
      */
-    public final void send(@NotNull Consumer<FedExResponse> responseConsumer) {
-        FedEx.getInstance().sendParcel(this, responseConsumer);
+    public final void send(FedEx fedEx, @NotNull Consumer<FedExResponse> responseConsumer) {
+        fedEx.sendParcel(this, responseConsumer);
     }
 
     @Getter @Setter
