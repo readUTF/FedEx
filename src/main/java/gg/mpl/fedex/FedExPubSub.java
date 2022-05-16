@@ -2,6 +2,7 @@ package gg.mpl.fedex;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import gg.mpl.fedex.listener.ParcelListener;
 import gg.mpl.fedex.parcels.Parcel;
 import gg.mpl.fedex.response.FedExResponse;
 import gg.mpl.fedex.response.FedExResponseParcel;
@@ -20,6 +21,8 @@ final class FedExPubSub extends JedisPubSub {
     @Override
     public void onMessage(String channel, String message) {
         try {
+
+            fedEx.debug("---------- PARCEL START ----------");
             String[] split = message.split(";");
             if (split.length < 4) {
                 fedEx.getLogger().severe("invalid parcel received.");
@@ -31,13 +34,16 @@ final class FedExPubSub extends JedisPubSub {
             JsonObject jsonObject = new JsonParser().parse(split[2]).getAsJsonObject();
             UUID parcelId = UUID.fromString(split[3]);
 
-            fedEx.debug(senderId);
-            fedEx.debug(name);
-            fedEx.debug(jsonObject);
-            fedEx.debug(parcelId);
+            fedEx.debug("name: " + name);
+            fedEx.debug("senderId: " + senderId);
+            fedEx.debug("json: " + jsonObject.toString());
+            fedEx.debug("parcelId: " + parcelId);
 
-            if (fedEx.getParcelListeners().stream().anyMatch(parcelListener -> !parcelListener.handleParcel(name, parcelId, jsonObject))) {
-                return;
+            for (ParcelListener parcelListener : fedEx.getParcelListeners()) {
+                FedExResponse fedExResponse = parcelListener.handleParcel(name, parcelId, jsonObject);
+                if(fedExResponse == null) continue;
+                fedEx.debug("handling response parcel");
+                fedEx.sendParcel(fedExResponse.getId(), new FedExResponseParcel(fedExResponse));
             }
 
             if (fedEx.getParcels().containsKey(name)) {
@@ -51,6 +57,8 @@ final class FedExPubSub extends JedisPubSub {
                     fedEx.sendParcel(fedExResponse.getId(), new FedExResponseParcel(fedExResponse));
                 }
             }
+
+            fedEx.debug("---------- PARCEL END ----------");
         } catch (Exception e) {
             fedEx.getLogger().severe("Failed to handle redis message");
             e.printStackTrace();

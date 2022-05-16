@@ -127,6 +127,7 @@ public class JedisQuick {
     JedisPool jedisPool;
 
     public static JedisPool getPool() {
+        System.out.println("got pool");
         return FedEx.getInstance().getJedisPool();
     }
 

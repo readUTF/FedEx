@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 public final class FedExResponseParcel extends Parcel {
+
     private final FedExResponse response;
 
     public FedExResponseParcel(FedExResponse fedExResponse) {

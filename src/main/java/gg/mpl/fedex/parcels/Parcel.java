@@ -36,6 +36,10 @@ public abstract class Parcel {
      */
     public abstract FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull JsonObject data);
 
+    public FedExResponse onReceive(@NotNull UUID parcelId, @NotNull JsonObject data) {
+        return null;
+    }
+
     /**
      * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
      */
