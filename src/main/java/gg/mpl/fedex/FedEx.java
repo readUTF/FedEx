@@ -109,6 +109,14 @@ public final class FedEx {
         });
     }
 
+    public void sendParcel(UUID id, String name, JsonObject data) {
+        executor.submit(() -> {
+            Jedis resource = getJedisPool().getResource();
+            resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
+            jedisPool.returnResource(resource);
+        });
+    }
+
     /**
      * Sends a parcel over the network
      *
