@@ -99,7 +99,7 @@ public final class FedEx {
             responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
 
         UUID finalId = id;
-        if (parcel.isSelfRun()) {
+        if (parcel.isSelfRun() || parcel.getClass().isAnnotationPresent(SelfRun.class)) {
             parcels.get(parcel.getName()).onReceive(channel, id, parcel.getData());
         }
         executor.submit(() -> {
