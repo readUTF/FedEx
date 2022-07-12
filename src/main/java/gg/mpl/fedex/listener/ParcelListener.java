@@ -1,12 +1,14 @@
 package gg.mpl.fedex.listener;
 
-import com.google.gson.JsonObject;
-import gg.mpl.fedex.response.FedExResponse;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.util.UUID;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface ParcelListener {
 
-public interface ParcelListener {
-
-    FedExResponse handleParcel(String name, UUID parcelId, JsonObject data);
+    String value() default "";
 
 }

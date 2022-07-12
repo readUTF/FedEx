@@ -2,7 +2,7 @@ package gg.mpl.fedex;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import gg.mpl.fedex.listener.ParcelListener;
+import gg.mpl.fedex.listener.ParcelListenerManager;
 import gg.mpl.fedex.parcels.Parcel;
 import gg.mpl.fedex.response.FedExResponse;
 import gg.mpl.fedex.response.FedExResponseParcel;
@@ -17,11 +17,8 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import java.util.*;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -35,13 +32,14 @@ public final class FedEx {
     @Getter
     private static final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
     private final Map<String, Parcel> parcels = new HashMap<>();
-    private final List<ParcelListener> parcelListeners;
     private final UUID senderId;
     private final String channel;
     private final JedisPool jedisPool;
     private final Gson gson;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private Logger logger = Logger.getLogger("FedEx");
+
+    @Getter private ParcelListenerManager parcelListenerManager;
 
     private boolean active;
     Thread poolThread;
@@ -58,7 +56,8 @@ public final class FedEx {
         this.gson = new Gson();
 
         senderId = UUID.randomUUID();
-        parcelListeners = new ArrayList<>();
+
+        parcelListenerManager = new ParcelListenerManager();
 
         registerParcel(new FedExResponseParcel(null));
         connect();
@@ -94,18 +93,25 @@ public final class FedEx {
      */
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
         if (id == null) id = UUID.randomUUID();
+        System.out.println("sending...");
 
         if (responseConsumer != null)
             responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
 
         UUID finalId = id;
         if (parcel.isSelfRun() || parcel.getClass().isAnnotationPresent(SelfRun.class)) {
-            parcels.get(parcel.getName()).onReceive(channel, id, parcel.getData());
+            Optional.ofNullable(parcels.get(parcel.getName())).ifPresent(parcel1 -> parcel1.onReceive(channel, finalId, parcel.getData()));
         }
+        System.out.println("submitting");
         executor.submit(() -> {
-            Jedis resource = getJedisPool().getResource();
-            resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
-            jedisPool.returnResource(resource);
+            try {
+                Jedis resource = getJedisPool().getResource();
+                resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
+                System.out.println(channel + ";" + senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
+                jedisPool.returnResource(resource);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
     }
 
@@ -183,11 +189,6 @@ public final class FedEx {
     @SafeVarargs
     public final void registerParcels(Class<? extends Parcel>... classes) {
         Stream.of(classes).forEach(this::registerParcel);
-    }
-
-    @SafeVarargs
-    public final void registerParcelListeners(@NotNull ParcelListener... parcelListeners) {
-        this.parcelListeners.addAll(Arrays.asList(parcelListeners));
     }
 
     public void debug(Object s) {

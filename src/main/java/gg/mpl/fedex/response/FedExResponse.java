@@ -32,6 +32,15 @@ public final class FedExResponse {
         return responseData;
     }
 
+    @Override
+    public String toString() {
+        return "FedExResponse{" +
+                "responseType=" + responseType +
+                ", responseData=" + responseData +
+                ", id=" + id +
+                '}';
+    }
+
     @SuppressWarnings("unused")
     public enum ResponseType {
         SUCCESS, FAILED, TIMED_OUT

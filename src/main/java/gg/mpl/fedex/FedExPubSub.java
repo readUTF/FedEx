@@ -2,7 +2,6 @@ package gg.mpl.fedex;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import gg.mpl.fedex.listener.ParcelListener;
 import gg.mpl.fedex.parcels.Parcel;
 import gg.mpl.fedex.response.FedExResponse;
 import gg.mpl.fedex.response.FedExResponseParcel;
@@ -39,12 +38,13 @@ final class FedExPubSub extends JedisPubSub {
             fedEx.debug("json: " + jsonObject.toString());
             fedEx.debug("parcelId: " + parcelId);
 
-            for (ParcelListener parcelListener : fedEx.getParcelListeners()) {
-                FedExResponse fedExResponse = parcelListener.handleParcel(name, parcelId, jsonObject);
-                if(fedExResponse == null) continue;
+
+            FedExResponse handleParcel = fedEx.getParcelListenerManager().handleParcel(name, parcelId, jsonObject);
+            if (handleParcel != null) {
                 fedEx.debug("handling response parcel");
-                fedEx.sendParcel(fedExResponse.getId(), new FedExResponseParcel(fedExResponse));
+                fedEx.sendParcel(handleParcel.getId(), new FedExResponseParcel(handleParcel));
             }
+
 
             if (fedEx.getParcels().containsKey(name)) {
                 fedEx.debug("Found parcel handler");

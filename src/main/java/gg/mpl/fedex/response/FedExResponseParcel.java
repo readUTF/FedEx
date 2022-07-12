@@ -1,8 +1,8 @@
 package gg.mpl.fedex.response;
 
 import com.google.gson.JsonObject;
-import gg.mpl.fedex.FedEx;
 import gg.mpl.fedex.parcels.Parcel;
+import gg.mpl.fedex.FedEx;
 import gg.mpl.fedex.utils.Pair;
 import org.jetbrains.annotations.NotNull;
 
