@@ -38,16 +38,11 @@ public final class FedEx {
     private final Gson gson;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private Logger logger = Logger.getLogger("FedEx");
-
-    @Getter private ParcelListenerManager parcelListenerManager;
-
+    private final ParcelListenerManager parcelListenerManager;
     private boolean active;
-    Thread poolThread;
-
-    @Setter
-    private boolean debug = false;
-
+    private Thread poolThread;
     private FedExPubSub pubSub;
+    @Setter private boolean debug = false;
 
     public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool) {
         instance = this;

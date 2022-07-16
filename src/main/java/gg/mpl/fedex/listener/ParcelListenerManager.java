@@ -30,7 +30,6 @@ public class ParcelListenerManager {
                 continue;
             }
             parcelListeners.put(method, classContainingListeners);
-            System.out.println(method);
         }
     }
 
