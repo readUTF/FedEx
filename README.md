@@ -1,5 +1,3 @@
-L + ratio
-
 # FedEx
 
 FedEx is a wrapper for Jedis, it allows you to better send and manage data being sent through redis. The library is especially helpful for packets that are sent multiple times and always consist of the same data/layout.
