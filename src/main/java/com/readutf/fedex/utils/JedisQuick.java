@@ -11,7 +11,8 @@ import java.util.function.Consumer;
 
 public class JedisQuick {
 
-    @Setter private static boolean debug = false;
+    @Setter
+    private static boolean debug = false;
 
     private FedEx fedEx;
 
@@ -149,9 +150,7 @@ public class JedisQuick {
     }
 
     public void handleDebug(String type) {
-        if(debug) {
-            System.out.println("Type called from: " + Thread.currentThread().getStackTrace()[3]);
-        }
+        fedEx.debug(type + " called from: " + Thread.currentThread().getStackTrace()[3]);
     }
 
 }

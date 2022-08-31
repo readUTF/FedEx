@@ -44,7 +44,6 @@ final class FedExPubSub extends JedisPubSub {
                 fedEx.debug("handling response parcel");
                 fedEx.sendParcel(handleParcel.getId(), new FedExResponseParcel(handleParcel));
             }
-            System.out.println(String.join(", ", fedEx.getParcels().keySet()));
 
             if (fedEx.getParcels().containsKey(name)) {
                 Parcel parcelHandler = fedEx.getParcels().get(name);

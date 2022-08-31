@@ -68,7 +68,7 @@ public final class FedEx {
     }
 
     public void close() {
-        System.out.println("fedex closed");
+        debug("fedex closed");
         active = false;
         if (pubSub != null && pubSub.isSubscribed()) {
             pubSub.unsubscribe();
