@@ -1,9 +1,9 @@
-package gg.mpl.fedex.response;
+package com.readutf.fedex.response;
 
 import com.google.gson.JsonObject;
-import gg.mpl.fedex.parcels.Parcel;
-import gg.mpl.fedex.FedEx;
-import gg.mpl.fedex.utils.Pair;
+import com.readutf.fedex.utils.Pair;
+import com.readutf.fedex.parcels.Parcel;
+import com.readutf.fedex.FedEx;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;

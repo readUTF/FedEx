@@ -1,14 +1,14 @@
-package gg.mpl.fedex;
+package com.readutf.fedex;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import gg.mpl.fedex.listener.ParcelListenerManager;
-import gg.mpl.fedex.parcels.Parcel;
-import gg.mpl.fedex.response.FedExResponse;
-import gg.mpl.fedex.response.FedExResponseParcel;
-import gg.mpl.fedex.response.TimeoutTask;
-import gg.mpl.fedex.utils.ClassUtils;
-import gg.mpl.fedex.utils.Pair;
+import com.readutf.fedex.response.FedExResponse;
+import com.readutf.fedex.response.FedExResponseParcel;
+import com.readutf.fedex.utils.ClassUtils;
+import com.readutf.fedex.utils.Pair;
+import com.readutf.fedex.listener.ParcelListenerManager;
+import com.readutf.fedex.parcels.Parcel;
+import com.readutf.fedex.response.TimeoutTask;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -88,7 +88,6 @@ public final class FedEx {
      */
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
         if (id == null) id = UUID.randomUUID();
-        System.out.println("sending...");
 
         if (responseConsumer != null)
             responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
@@ -97,12 +96,11 @@ public final class FedEx {
         if (parcel.isSelfRun() || parcel.getClass().isAnnotationPresent(SelfRun.class)) {
             Optional.ofNullable(parcels.get(parcel.getName())).ifPresent(parcel1 -> parcel1.onReceive(channel, finalId, parcel.getData()));
         }
-        System.out.println("submitting");
         executor.submit(() -> {
             try {
                 Jedis resource = getJedisPool().getResource();
                 resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
-                System.out.println(channel + ";" + senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
+                debug(channel + ";" + senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
                 jedisPool.returnResource(resource);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -111,6 +109,15 @@ public final class FedEx {
     }
 
     public void sendParcel(UUID id, String name, JsonObject data) {
+        executor.submit(() -> {
+            Jedis resource = getJedisPool().getResource();
+            resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
+            jedisPool.returnResource(resource);
+        });
+    }
+
+    public void sendParcel(UUID id, String name, JsonObject data, Consumer<FedExResponse> responseConsumer) {
+        responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
         executor.submit(() -> {
             Jedis resource = getJedisPool().getResource();
             resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
@@ -170,6 +177,7 @@ public final class FedEx {
             parcels.put(parcel.getName(), parcel);
         }
     }
+
 
     /**
      * Registers all parcels in the package of `mainClass` using reflection and JarEntries

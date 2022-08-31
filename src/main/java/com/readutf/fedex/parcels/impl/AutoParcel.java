@@ -1,8 +1,8 @@
-package gg.mpl.fedex.parcels.impl;
+package com.readutf.fedex.parcels.impl;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import gg.mpl.fedex.parcels.Parcel;
+import com.readutf.fedex.parcels.Parcel;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 

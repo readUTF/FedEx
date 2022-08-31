@@ -1,6 +1,7 @@
-package gg.mpl.fedex.utils;
+package com.readutf.fedex.utils;
 
-import gg.mpl.fedex.FedEx;
+import com.readutf.fedex.FedEx;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -10,9 +11,18 @@ import java.util.function.Consumer;
 
 public class JedisQuick {
 
-    public static void set(String key, String value) {
+    @Setter private static boolean debug = false;
+
+    private FedEx fedEx;
+
+    public JedisQuick(FedEx fedEx) {
+        this.fedEx = fedEx;
+    }
+
+    public void set(String key, String value) {
         try {
             Jedis jedis = getPool().borrowObject();
+            handleDebug("set");
             jedis.set(key, value);
             getPool().returnObject(jedis);
         } catch (Exception e) {
@@ -20,9 +30,10 @@ public class JedisQuick {
         }
     }
 
-    public static boolean exists(String key) {
+    public boolean exists(String key) {
         try {
             Jedis jedis = getPool().borrowObject();
+            handleDebug("exists");
             return jedis.exists(key);
         } catch (Exception e) {
             e.printStackTrace();
@@ -30,11 +41,12 @@ public class JedisQuick {
         }
     }
 
-    public static String get(String key) {
+    public String get(String key) {
         String value = null;
         try {
             Jedis jedis = getPool().borrowObject();
             value = jedis.get(key);
+            handleDebug("get");
             getPool().returnObject(jedis);
         } catch (Exception e) {
             e.printStackTrace();
@@ -42,10 +54,11 @@ public class JedisQuick {
         return value;
     }
 
-    public static String hget(String key, String field) {
+    public String hget(String key, String field) {
         try {
             Jedis jedis = getPool().borrowObject();
             String result = jedis.hget(key, field);
+            handleDebug("hget");
             getPool().returnObject(jedis);
             return result;
         } catch (Exception e) {
@@ -53,10 +66,11 @@ public class JedisQuick {
         }
     }
 
-    public static Map<String, String> hgetall(String key) {
+    public Map<String, String> hgetall(String key) {
         try {
             Jedis jedis = getPool().borrowObject();
             Map<String, String> result = jedis.hgetAll(key);
+            handleDebug("hgetAll");
             getPool().returnObject(jedis);
             return result;
         } catch (Exception e) {
@@ -64,30 +78,33 @@ public class JedisQuick {
         }
     }
 
-    public static void addToList(String key, String... values) {
+    public void addToList(String key, String... values) {
         try {
             Jedis jedis = getPool().borrowObject();
             jedis.sadd(key, values);
+            handleDebug("sadd");
             getPool().returnObject(jedis);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void removeFromList(String key, String... values) {
+    public void removeFromList(String key, String... values) {
         try {
             Jedis jedis = getPool().borrowObject();
             jedis.srem(key, values);
+            handleDebug("srem");
             getPool().returnObject(jedis);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static List<String> getList(String key) {
+    public List<String> getList(String key) {
         try {
             Jedis jedis = getPool().borrowObject();
             Set<String> members = jedis.smembers(key);
+            handleDebug("smembers");
             getPool().returnObject(jedis);
             return new ArrayList<>(members);
         } catch (Exception e) {
@@ -97,38 +114,44 @@ public class JedisQuick {
     }
 
     @SneakyThrows
-    public static void hset(String key, String field, String value) {
+    public void hset(String key, String field, String value) {
         Jedis jedis = getPool().borrowObject();
         jedis.hset(key, field, value);
+        handleDebug("hset");
         getPool().returnObject(jedis);
     }
 
-    public static void del(String key) {
+    public void del(String key) {
 
         try {
             Jedis jedis = getPool().borrowObject();
             jedis.del(key);
+            handleDebug("del");
             getPool().returnObject(jedis);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void useRedis(Consumer<Jedis> jedisConsumer) {
+    public void useRedis(Consumer<Jedis> jedisConsumer) {
         try {
             Jedis jedis = getPool().borrowObject();
             jedisConsumer.accept(jedis);
+            handleDebug("consumer");
             getPool().returnObject(jedis);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    JedisPool jedisPool;
-
-    public static JedisPool getPool() {
-        return FedEx.getInstance().getJedisPool();
+    public JedisPool getPool() {
+        return fedEx.getJedisPool();
     }
 
+    public void handleDebug(String type) {
+        if(debug) {
+            System.out.println("Type called from: " + Thread.currentThread().getStackTrace()[3]);
+        }
+    }
 
 }

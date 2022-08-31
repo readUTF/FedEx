@@ -1,7 +1,7 @@
-package gg.mpl.fedex.utils;
+package com.readutf.fedex.utils;
 
 import com.google.gson.JsonObject;
-import gg.mpl.fedex.response.FedExResponse;
+import com.readutf.fedex.response.FedExResponse;
 
 import java.util.UUID;
 

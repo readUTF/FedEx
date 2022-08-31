@@ -1,10 +1,10 @@
-package gg.mpl.fedex;
+package com.readutf.fedex;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import gg.mpl.fedex.parcels.Parcel;
-import gg.mpl.fedex.response.FedExResponse;
-import gg.mpl.fedex.response.FedExResponseParcel;
+import com.readutf.fedex.parcels.Parcel;
+import com.readutf.fedex.response.FedExResponse;
+import com.readutf.fedex.response.FedExResponseParcel;
 import lombok.AllArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import redis.clients.jedis.JedisPubSub;
@@ -44,7 +44,7 @@ final class FedExPubSub extends JedisPubSub {
                 fedEx.debug("handling response parcel");
                 fedEx.sendParcel(handleParcel.getId(), new FedExResponseParcel(handleParcel));
             }
-
+            System.out.println(String.join(", ", fedEx.getParcels().keySet()));
 
             if (fedEx.getParcels().containsKey(name)) {
                 Parcel parcelHandler = fedEx.getParcels().get(name);

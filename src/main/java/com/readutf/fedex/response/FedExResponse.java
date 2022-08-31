@@ -1,4 +1,4 @@
-package gg.mpl.fedex.response;
+package com.readutf.fedex.response;
 
 import com.google.gson.JsonObject;
 import lombok.Getter;

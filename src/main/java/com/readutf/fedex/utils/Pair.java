@@ -1,4 +1,4 @@
-package gg.mpl.fedex.utils;
+package com.readutf.fedex.utils;
 
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;

@@ -1,8 +1,8 @@
-package gg.mpl.fedex.response;
+package com.readutf.fedex.response;
 
 import com.google.gson.JsonObject;
-import gg.mpl.fedex.FedEx;
-import gg.mpl.fedex.utils.Pair;
+import com.readutf.fedex.FedEx;
+import com.readutf.fedex.utils.Pair;
 
 import java.util.*;
 import java.util.function.Consumer;

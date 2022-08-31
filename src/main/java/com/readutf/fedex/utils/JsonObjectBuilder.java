@@ -1,5 +1,6 @@
-package gg.mpl.fedex.utils;
+package com.readutf.fedex.utils;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class JsonObjectBuilder {
@@ -17,6 +18,11 @@ public class JsonObjectBuilder {
 
     public JsonObjectBuilder addProperty(String key, Boolean value) {
         jsonObject.addProperty(key, value);
+        return this;
+    }
+
+    public JsonObjectBuilder addProperty(String key, JsonElement jsonElement) {
+        jsonObject.add(key, jsonElement);
         return this;
     }
 

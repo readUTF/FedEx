@@ -1,4 +1,4 @@
-package gg.mpl.fedex.listener;
+package com.readutf.fedex.listener;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
