@@ -23,8 +23,7 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-@Getter
-@SuppressWarnings("unused")
+@SuppressWarnings("unused") @Getter
 public final class FedEx {
 
     @Deprecated @Getter private static FedEx instance;
@@ -98,7 +97,7 @@ public final class FedEx {
         }
         executor.submit(() -> {
             try {
-                Jedis resource = getJedisPool().getResource();
+                Jedis resource = jedisPool.getResource();
                 resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
                 debug(channel + ";" + senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
                 jedisPool.returnResource(resource);
@@ -110,7 +109,7 @@ public final class FedEx {
 
     public void sendParcel(UUID id, String name, JsonObject data) {
         executor.submit(() -> {
-            Jedis resource = getJedisPool().getResource();
+            Jedis resource = jedisPool.getResource();
             resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
             jedisPool.returnResource(resource);
         });
@@ -119,7 +118,7 @@ public final class FedEx {
     public void sendParcel(UUID id, String name, JsonObject data, Consumer<FedExResponse> responseConsumer) {
         responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
         executor.submit(() -> {
-            Jedis resource = getJedisPool().getResource();
+            Jedis resource = jedisPool.getResource();
             resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
             jedisPool.returnResource(resource);
         });
@@ -195,7 +194,7 @@ public final class FedEx {
     }
 
     public void debug(Object s) {
-        if (debug) System.out.println(s);
+        if (debug) logger.warning((String) s);
     }
 
 }
