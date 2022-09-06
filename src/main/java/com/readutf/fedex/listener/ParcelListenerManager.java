@@ -15,17 +15,19 @@ public class ParcelListenerManager {
     FedEx fedEx;
     private HashMap<Method, Object> parcelListeners = new HashMap<>();
 
-    
-    
+    public ParcelListenerManager(FedEx fedEx) {
+        this.fedEx = fedEx;
+    }
+
     @SneakyThrows
-    public void registerParcelListeners(Class<?> clazz, Object... classProps)  {
+    public Object registerParcelListeners(Class<?> clazz, Object... classProps) {
         Class<?>[] classes = Arrays.stream(classProps).map(Object::getClass).toArray(value -> new Class<?>[classProps.length]);
 
         Optional<Constructor<?>> foundConstructors = Arrays.stream(clazz.getConstructors())
                 .filter(constructor -> propsMatch(constructor.getParameterTypes(), classes))
                 .findFirst();
 
-        if(foundConstructors.isPresent()) {
+        if (foundConstructors.isPresent()) {
             Constructor<?> constructor = foundConstructors.get();
             constructor.setAccessible(true);
             Object o = constructor.newInstance(classProps);
@@ -33,21 +35,19 @@ public class ParcelListenerManager {
                 if (method.isAnnotationPresent(ParcelListener.class)) {
                     if (method.getParameterTypes().length < 2) {
                         fedEx.debug("Invalid parameters for parcel listener");
-                    }
-                    else if (method.getParameterTypes()[0] != UUID.class || method.getParameterTypes()[1] != JsonObject.class) {
+                    } else if (method.getParameterTypes()[0] != UUID.class || method.getParameterTypes()[1] != JsonObject.class) {
                         fedEx.debug("Parcel listener parameters should be [UUID, JsonObject]");
-                    }
-                    else {
+                    } else {
                         this.parcelListeners.put(method, o);
                         fedEx.debug("(" + clazz.getSimpleName() + ") Registered parcel listener with name " + method.getName());
                     }
                 }
             }
-
-
+            return o;
         } else {
             throw new Exception("Could not find constructors with props");
-        }}
+        }
+    }
 
     @SneakyThrows
     public FedExResponse handleParcel(String name, UUID uuid, JsonObject data) {
@@ -57,7 +57,7 @@ public class ParcelListenerManager {
             if (!annotation.value().equalsIgnoreCase(name)) {
                 continue;
             }
-            if(method.getReturnType() == FedExResponse.class) {
+            if (method.getReturnType() == FedExResponse.class) {
                 try {
                     return (FedExResponse) method.invoke(methodObjectEntry.getValue(), uuid, data);
                 } catch (IllegalAccessException e) {
@@ -79,13 +79,13 @@ public class ParcelListenerManager {
 
     public boolean propsMatch(Class<?>[] foundClasses, Class<?>[] providedClasses) {
 
-        if(foundClasses.length == 0 && providedClasses.length == 0) return true;
-        if(foundClasses.length != providedClasses.length) return false;
+        if (foundClasses.length == 0 && providedClasses.length == 0) return true;
+        if (foundClasses.length != providedClasses.length) return false;
         for (int i = 0; i < foundClasses.length; i++) {
             Class<?> found = foundClasses[i];
             Class<?> provided = providedClasses[i];
 
-            if(found != provided && !found.isAssignableFrom(provided)) {
+            if (found != provided && !found.isAssignableFrom(provided)) {
                 return false;
             } else {
                 return true;

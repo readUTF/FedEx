@@ -74,7 +74,7 @@ public final class ClassUtils {
                 Class<?> clazz = null;
 
                 try {
-                    clazz = Class.forName(className);
+                    clazz = clazz1.getClassLoader().loadClass(className);
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }

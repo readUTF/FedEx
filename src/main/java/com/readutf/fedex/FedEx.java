@@ -23,10 +23,13 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-@SuppressWarnings("unused") @Getter
+@SuppressWarnings("unused")
+@Getter()
 public final class FedEx {
 
-    @Deprecated @Getter private static FedEx instance;
+    @Deprecated
+    @Getter
+    private static FedEx instance;
 
     @Getter
     private static final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
@@ -41,7 +44,8 @@ public final class FedEx {
     private boolean active;
     private Thread poolThread;
     private FedExPubSub pubSub;
-    @Setter private boolean debug = false;
+    @Setter
+    private boolean debug = false;
 
     public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool) {
         instance = this;
@@ -51,13 +55,13 @@ public final class FedEx {
 
         senderId = UUID.randomUUID();
 
-        parcelListenerManager = new ParcelListenerManager();
+        parcelListenerManager = new ParcelListenerManager(this);
 
         registerParcel(new FedExResponseParcel(null));
         connect();
     }
 
-    public void connect() {
+    private void connect() {
         active = true;
         poolThread = new Thread(() -> jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel));
         poolThread.start();
@@ -67,6 +71,9 @@ public final class FedEx {
 //        timeoutTask.start();
     }
 
+    /**
+     * Close all messaging channels and disconnect from redis
+     */
     public void close() {
         debug("fedex closed");
         active = false;
@@ -107,6 +114,13 @@ public final class FedEx {
         });
     }
 
+    /**
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param id   The parcel id
+     * @param name The parcel name
+     * @param data Json data to be sent
+     */
     public void sendParcel(UUID id, String name, JsonObject data) {
         executor.submit(() -> {
             Jedis resource = jedisPool.getResource();
@@ -115,6 +129,14 @@ public final class FedEx {
         });
     }
 
+    /**
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param id   The parcel id
+     * @param name The parcel name
+     * @param data Json data to be sent
+     * @param responseConsumer Consumer function that handles the response from the remote server
+     */
     public void sendParcel(UUID id, String name, JsonObject data, Consumer<FedExResponse> responseConsumer) {
         responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
         executor.submit(() -> {
@@ -188,6 +210,11 @@ public final class FedEx {
         ClassUtils.getClassesInPackage(mainClass).stream().filter(Parcel.class::isAssignableFrom).forEach(clazz -> registerParcel((Class<? extends Parcel>) clazz));
     }
 
+    /**
+     * Registers all parcels provided by instantiation through reflections
+     *
+     * @param classes The class
+     */
     @SafeVarargs
     public final void registerParcels(Class<? extends Parcel>... classes) {
         Stream.of(classes).forEach(this::registerParcel);
