@@ -24,8 +24,8 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
-@Getter()
-public final class FedEx {
+@Getter
+public class FedEx {
 
     @Deprecated
     @Getter
