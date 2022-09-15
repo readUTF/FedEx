@@ -8,6 +8,7 @@ import redis.clients.jedis.JedisPool;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class JedisQuick {
 
@@ -143,6 +144,15 @@ public class JedisQuick {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @SneakyThrows
+    public <T> T useRedisAndGet(Function<Jedis, T> jedisFunction) {
+        Jedis jedis = getPool().borrowObject();
+        T resource = jedisFunction.apply(jedis);
+        handleDebug("consumer");
+        getPool().returnObject(jedis);
+        return resource;
     }
 
     public JedisPool getPool() {
