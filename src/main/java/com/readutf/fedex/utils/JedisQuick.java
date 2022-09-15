@@ -147,7 +147,7 @@ public class JedisQuick {
     }
 
     @SneakyThrows
-    public <T> T useRedis(Function<Jedis, T> jedisFunction) {
+    public <T> T useRedisAndGet(Function<Jedis, T> jedisFunction) {
         Jedis jedis = getPool().borrowObject();
         T resource = jedisFunction.apply(jedis);
         handleDebug("consumer");
