@@ -2,11 +2,13 @@ package com.readutf.fedex;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.readutf.fedex.listener.ParcelListenerManager;
-import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.response.FedExResponse;
 import com.readutf.fedex.response.FedExResponseParcel;
 import com.readutf.fedex.utils.ClassUtils;
+import com.readutf.fedex.utils.Pair;
+import com.readutf.fedex.listener.ParcelListenerManager;
+import com.readutf.fedex.parcels.Parcel;
+import com.readutf.fedex.response.TimeoutTask;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -14,13 +16,10 @@ import org.jetbrains.annotations.Nullable;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -33,7 +32,7 @@ public class FedEx {
     private static FedEx instance;
 
     @Getter
-    private static final Map<UUID, CompletableFuture<FedExResponse>> responseFutures = new HashMap<>();
+    private static final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
     private final Map<String, Parcel> parcels = new HashMap<>();
     private final UUID senderId;
     private final String channel;
@@ -66,6 +65,10 @@ public class FedEx {
         active = true;
         poolThread = new Thread(() -> jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel));
         poolThread.start();
+        new TimeoutTask(new Timer(), this);
+
+
+//        timeoutTask.start();
     }
 
     /**
@@ -83,16 +86,17 @@ public class FedEx {
     }
 
     /**
-     * Send a parcel through this instance's registered channel
-     * @param id Parcel id, used to link send data with response parcel
-     * @param parcel Data container
-     * @return Response future
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param id               The id
+     * @param parcel           The parcel
+     * @param responseConsumer The response consumer
      */
-    public CompletableFuture<FedExResponse> sendParcel(@Nullable UUID id, @NotNull Parcel parcel) {
+    public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
         if (id == null) id = UUID.randomUUID();
 
-        CompletableFuture<FedExResponse> future = new CompletableFuture<>();
-        responseFutures.put(id, future);
+        if (responseConsumer != null)
+            responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
 
         UUID finalId = id;
         if (parcel.isSelfRun() || parcel.getClass().isAnnotationPresent(SelfRun.class)) {
@@ -108,25 +112,67 @@ public class FedEx {
                 e.printStackTrace();
             }
         });
-        return future;
     }
 
-
-    public CompletableFuture<FedExResponse> sendParcel(UUID id, String name, JsonObject data) {
-        CompletableFuture<FedExResponse> future = new CompletableFuture<>();
-        responseFutures.put(id, future);
-        System.out.println("trying to publish?");
-
+    /**
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param id   The parcel id
+     * @param name The parcel name
+     * @param data Json data to be sent
+     */
+    public void sendParcel(UUID id, String name, JsonObject data) {
+        executor.submit(() -> {
             Jedis resource = jedisPool.getResource();
-            System.out.println("publishing data");
             resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
             jedisPool.returnResource(resource);
-
-        return future;
+        });
     }
 
-    public CompletableFuture<FedExResponse> sendParcel(@NotNull Parcel parcel) {
-        return sendParcel(null, parcel);
+    /**
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param id   The parcel id
+     * @param name The parcel name
+     * @param data Json data to be sent
+     * @param responseConsumer Consumer function that handles the response from the remote server
+     */
+    public void sendParcel(UUID id, String name, JsonObject data, Consumer<FedExResponse> responseConsumer) {
+        responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
+        executor.submit(() -> {
+            Jedis resource = jedisPool.getResource();
+            resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
+            jedisPool.returnResource(resource);
+        });
+    }
+
+    /**
+     * Sends a parcel over the network
+     *
+     * @param id     The id
+     * @param parcel The parcel
+     */
+    public void sendParcel(@NotNull UUID id, @NotNull Parcel parcel) {
+        sendParcel(id, parcel, null);
+    }
+
+    /**
+     * Sends a parcel over the network with a consumer waiting for a response parcel
+     *
+     * @param parcel           The parcel
+     * @param responseConsumer The response consumer
+     */
+    public void sendParcel(@NotNull Parcel parcel, @NotNull Consumer<FedExResponse> responseConsumer) {
+        sendParcel(null, parcel, responseConsumer);
+    }
+
+    /**
+     * Sends a parcel over the network
+     *
+     * @param parcel The parcel
+     */
+    public void sendParcel(@NotNull Parcel parcel) {
+        sendParcel(null, parcel, null);
     }
 
     /**
