@@ -1,38 +1,33 @@
 package com.readutf.fedex.utils;
 
-import com.google.gson.JsonElement;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+
+import java.util.HashMap;
 
 public class JsonObjectBuilder {
 
-    JsonObject jsonObject;
+    private static Gson gson = new Gson();
+
+    HashMap<String, Object> objects;
+
+    public JsonObjectBuilder(String key, Object value) {
+        objects = new HashMap<>();
+        objects.put(key, value);
+    }
 
     public JsonObjectBuilder() {
-        this.jsonObject = new JsonObject();
+        objects = new HashMap<>();
     }
 
-    public JsonObjectBuilder addProperty(String key, String value) {
-        jsonObject.addProperty(key, value);
-        return this;
-    }
-
-    public JsonObjectBuilder addProperty(String key, Boolean value) {
-        jsonObject.addProperty(key, value);
-        return this;
-    }
-
-    public JsonObjectBuilder addProperty(String key, JsonElement jsonElement) {
-        jsonObject.add(key, jsonElement);
-        return this;
-    }
-
-    public JsonObjectBuilder addProperty(String key, Number value) {
-        jsonObject.addProperty(key, value);
+    public JsonObjectBuilder add(String key, Object value) {
+        objects.put(key, value);
         return this;
     }
 
     public JsonObject build() {
-        return jsonObject;
+        JsonObject jsonObject = new JsonObject();
+        return gson.toJsonTree(objects).getAsJsonObject();
     }
 
 }
