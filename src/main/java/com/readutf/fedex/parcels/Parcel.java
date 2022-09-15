@@ -8,7 +8,7 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 
 @Getter
 public abstract class Parcel {
@@ -40,18 +40,12 @@ public abstract class Parcel {
         return null;
     }
 
-    /**
-     * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
-     */
-    public final void send(FedEx fedEx) {
-        fedEx.sendParcel(this);
-    }
 
     /**
      * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
      */
-    public final void send(FedEx fedEx, @NotNull Consumer<FedExResponse> responseConsumer) {
-        fedEx.sendParcel(this, responseConsumer);
+    public final CompletableFuture<FedExResponse> send(FedEx fedEx) {
+        return fedEx.sendParcel(this);
     }
 
     @Getter @Setter

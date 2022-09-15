@@ -1,14 +1,13 @@
 package com.readutf.fedex.response;
 
 import com.google.gson.JsonObject;
-import com.readutf.fedex.utils.Pair;
-import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.FedEx;
+import com.readutf.fedex.parcels.Parcel;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 
 public final class FedExResponseParcel extends Parcel {
 
@@ -30,11 +29,11 @@ public final class FedExResponseParcel extends Parcel {
 
     @Override
     public FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull JsonObject data) {
-        Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getResponseConsumers();
+        Map<UUID, CompletableFuture<FedExResponse>> responseConsumers = FedEx.getResponseFutures();
         if (responseConsumers.containsKey(parcelId)) {
             FedExResponse response = new FedExResponse(data);
 
-            responseConsumers.get(parcelId).getKey().accept(response);
+            responseConsumers.get(parcelId).complete(response);
             responseConsumers.remove(parcelId);
         }
 
