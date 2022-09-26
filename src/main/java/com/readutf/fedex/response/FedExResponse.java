@@ -1,34 +1,34 @@
 package com.readutf.fedex.response;
 
-import com.google.gson.JsonObject;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.UUID;
 
 @Getter
 public final class FedExResponse {
 
     private final ResponseType responseType;
-    private final JsonObject responseData;
+    private final HashMap<String, Object> responseData;
     private UUID id;
 
-    public FedExResponse(@NotNull UUID id, @NotNull ResponseType responseType, @NotNull JsonObject responseData) {
+    public FedExResponse(@NotNull UUID id, @NotNull ResponseType responseType, @NotNull HashMap<String, Object> responseData) {
         this.id = id;
         this.responseType = responseType;
         this.responseData = responseData;
     }
 
-    public FedExResponse(@NotNull JsonObject parcelData) {
-        this.responseType = ResponseType.valueOf(parcelData.get("ResponseType").getAsString());
+    public FedExResponse(@NotNull HashMap<String, Object> parcelData) {
+        this.responseType = ResponseType.valueOf((String) parcelData.get("ResponseType"));
         this.responseData = parcelData;
 
         this.responseData.remove("ResponseType");
     }
 
     @NotNull
-    public JsonObject getResponseData() {
-        responseData.addProperty("ResponseType", responseType.name());
+    public HashMap<String, Object> getResponseData() {
+        responseData.put("ResponseType", responseType.name());
         return responseData;
     }
 

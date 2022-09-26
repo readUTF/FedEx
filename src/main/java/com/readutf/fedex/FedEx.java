@@ -1,7 +1,7 @@
 package com.readutf.fedex;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.readutf.fedex.response.FedExResponse;
 import com.readutf.fedex.response.FedExResponseParcel;
 import com.readutf.fedex.utils.ClassUtils;
@@ -11,6 +11,7 @@ import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.response.TimeoutTask;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import redis.clients.jedis.Jedis;
@@ -37,8 +38,8 @@ public class FedEx {
     private final UUID senderId;
     private final String channel;
     private final JedisPool jedisPool;
-    private final Gson gson;
     private final ExecutorService executor = Executors.newCachedThreadPool();
+    private ObjectMapper objectMapper;
     private Logger logger = Logger.getLogger("FedEx");
     private final ParcelListenerManager parcelListenerManager;
     private boolean active;
@@ -47,11 +48,10 @@ public class FedEx {
     @Setter
     private boolean debug = false;
 
-    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool) {
+    public FedEx(@NotNull String channel, @NotNull JedisPool jedisPool, ObjectMapper objectMapper) {
         instance = this;
         this.channel = channel;
         this.jedisPool = jedisPool;
-        this.gson = new Gson();
 
         senderId = UUID.randomUUID();
 
@@ -121,10 +121,10 @@ public class FedEx {
      * @param name The parcel name
      * @param data Json data to be sent
      */
-    public void sendParcel(UUID id, String name, JsonObject data) {
+    public void sendParcel(UUID id, String name, HashMap<String, Object> data) {
         executor.submit(() -> {
             Jedis resource = jedisPool.getResource();
-            resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
+            resource.publish(channel, senderId.toString() + ";" + name + ";" + mapToJson(data) + ";" + id);
             jedisPool.returnResource(resource);
         });
     }
@@ -137,11 +137,11 @@ public class FedEx {
      * @param data Json data to be sent
      * @param responseConsumer Consumer function that handles the response from the remote server
      */
-    public void sendParcel(UUID id, String name, JsonObject data, Consumer<FedExResponse> responseConsumer) {
+    public void sendParcel(UUID id, String name, HashMap<String, Object> data, Consumer<FedExResponse> responseConsumer) {
         responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
         executor.submit(() -> {
             Jedis resource = jedisPool.getResource();
-            resource.publish(channel, senderId.toString() + ";" + name + ";" + data.toString() + ";" + id);
+            resource.publish(channel, senderId.toString() + ";" + name + ";" + mapToJson(data) + ";" + id);
             jedisPool.returnResource(resource);
         });
     }
@@ -223,5 +223,16 @@ public class FedEx {
     public void debug(Object s) {
         if (debug) logger.warning((String) s);
     }
+
+    @SneakyThrows
+    protected HashMap<String, Object> jsonToMap(String json) {
+        return objectMapper.readValue(json, new TypeReference<HashMap<String, Object>>() {});
+    }
+
+    @SneakyThrows
+    protected String mapToJson(HashMap<String, Object> data) {
+        return objectMapper.writeValueAsString(data);
+    }
+
 
 }

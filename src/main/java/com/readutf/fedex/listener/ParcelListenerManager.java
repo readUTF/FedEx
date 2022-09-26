@@ -1,6 +1,5 @@
 package com.readutf.fedex.listener;
 
-import com.google.gson.JsonObject;
 import com.readutf.fedex.FedEx;
 import com.readutf.fedex.response.FedExResponse;
 import lombok.SneakyThrows;
@@ -35,7 +34,7 @@ public class ParcelListenerManager {
                 if (method.isAnnotationPresent(ParcelListener.class)) {
                     if (method.getParameterTypes().length < 2) {
                         fedEx.debug("Invalid parameters for parcel listener");
-                    } else if (method.getParameterTypes()[0] != UUID.class || method.getParameterTypes()[1] != JsonObject.class) {
+                    } else if (method.getParameterTypes()[0] != UUID.class || method.getParameterTypes()[1] != HashMap.class) {
                         fedEx.debug("Parcel listener parameters should be [UUID, JsonObject]");
                     } else {
                         this.parcelListeners.put(method, o);
@@ -50,7 +49,7 @@ public class ParcelListenerManager {
     }
 
     @SneakyThrows
-    public FedExResponse handleParcel(String name, UUID uuid, JsonObject data) {
+    public FedExResponse handleParcel(String name, UUID uuid, HashMap<String, Object> data) {
         for (Map.Entry<Method, Object> methodObjectEntry : parcelListeners.entrySet()) {
             Method method = methodObjectEntry.getKey();
             ParcelListener annotation = method.getAnnotation(ParcelListener.class);
@@ -70,6 +69,11 @@ public class ParcelListenerManager {
                 try {
                     method.invoke(methodObjectEntry.getValue(), uuid, data);
                 } catch (IllegalAccessException | InvocationTargetException e) {
+                    fedEx.debug("ERROR: " + e);
+                    for (StackTraceElement stackTraceElement : e.getStackTrace()) {
+                        fedEx.debug(stackTraceElement.toString());
+                    }
+
                     fedEx.debug("Error occurred invoking parcel listener: " + e.getLocalizedMessage());
                 }
             }

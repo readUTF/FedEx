@@ -1,12 +1,12 @@
 package com.readutf.fedex.parcels;
 
-import com.google.gson.JsonObject;
 import com.readutf.fedex.FedEx;
 import com.readutf.fedex.response.FedExResponse;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -21,12 +21,12 @@ public abstract class Parcel {
     public abstract String getName();
 
     /**
-     * Gets the data to be sent as a {@link JsonObject}
+     * Gets the data to be sent as a {@link HashMap}
      *
      * @return The data
      */
     @NotNull
-    public abstract JsonObject getData();
+    public abstract HashMap<String, Object> getData();
 
 
     /**
@@ -34,9 +34,9 @@ public abstract class Parcel {
      *
      * @return Parcel which will be sent back in response or null if no response is needed
      */
-    public abstract FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull JsonObject data);
+    public abstract FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull HashMap<String, Object> data);
 
-    public FedExResponse onReceive(@NotNull UUID parcelId, @NotNull JsonObject data) {
+    public FedExResponse onReceive(@NotNull UUID parcelId, @NotNull HashMap<String, Object> data) {
         return null;
     }
 

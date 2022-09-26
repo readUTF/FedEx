@@ -1,11 +1,11 @@
 package com.readutf.fedex.response;
 
-import com.google.gson.JsonObject;
-import com.readutf.fedex.utils.Pair;
-import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.FedEx;
+import com.readutf.fedex.parcels.Parcel;
+import com.readutf.fedex.utils.Pair;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -24,12 +24,12 @@ public final class FedExResponseParcel extends Parcel {
     }
 
     @Override
-    public @NotNull JsonObject getData() {
+    public @NotNull HashMap<String, Object> getData() {
         return response.getResponseData();
     }
 
     @Override
-    public FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull JsonObject data) {
+    public FedExResponse onReceive(String channel, @NotNull UUID parcelId, @NotNull HashMap<String, Object> data) {
         Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getResponseConsumers();
         if (responseConsumers.containsKey(parcelId)) {
             FedExResponse response = new FedExResponse(data);

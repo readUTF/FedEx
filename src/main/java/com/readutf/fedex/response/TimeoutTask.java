@@ -1,6 +1,5 @@
 package com.readutf.fedex.response;
 
-import com.google.gson.JsonObject;
 import com.readutf.fedex.FedEx;
 import com.readutf.fedex.utils.Pair;
 
@@ -26,7 +25,7 @@ public final class TimeoutTask extends TimerTask {
             Pair<Consumer<FedExResponse>, Long> responseConsumerAndTimestamp = entry.getValue();
             long taken = System.currentTimeMillis() - responseConsumerAndTimestamp.getValue();
             if (taken > 1000) {
-                responseConsumerAndTimestamp.getKey().accept(new FedExResponse(uuid, FedExResponse.ResponseType.TIMED_OUT, new JsonObject()));
+                responseConsumerAndTimestamp.getKey().accept(new FedExResponse(uuid, FedExResponse.ResponseType.TIMED_OUT, new HashMap<>()));
                 toRemove.add(uuid);
             }
         }
