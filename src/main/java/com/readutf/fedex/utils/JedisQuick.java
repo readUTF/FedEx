@@ -13,7 +13,7 @@ import java.util.function.Function;
 public class JedisQuick {
 
     @Setter
-    private static boolean debug = false;
+    private boolean debug = false;
 
     private FedEx fedEx;
 
@@ -160,6 +160,7 @@ public class JedisQuick {
     }
 
     public void handleDebug(String type) {
+        if(!debug) return;
         fedEx.debug(type + " called from: " + Thread.currentThread().getStackTrace()[3]);
     }
 

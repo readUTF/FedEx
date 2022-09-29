@@ -2,6 +2,7 @@ package com.readutf.fedex;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.readutf.fedex.parcels.impl.AutoParcel;
 import com.readutf.fedex.response.FedExResponse;
 import com.readutf.fedex.response.FedExResponseParcel;
 import com.readutf.fedex.utils.ClassUtils;
@@ -39,7 +40,7 @@ public class FedEx {
     private final String channel;
     private final JedisPool jedisPool;
     private final ExecutorService executor = Executors.newCachedThreadPool();
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
     private Logger logger = Logger.getLogger("FedEx");
     private final ParcelListenerManager parcelListenerManager;
     private boolean active;
@@ -52,6 +53,7 @@ public class FedEx {
         instance = this;
         this.channel = channel;
         this.jedisPool = jedisPool;
+        this.objectMapper = objectMapper;
 
         senderId = UUID.randomUUID();
 
@@ -93,25 +95,40 @@ public class FedEx {
      * @param responseConsumer The response consumer
      */
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
-        if (id == null) id = UUID.randomUUID();
-
-        if (responseConsumer != null)
-            responseConsumers.put(id, new Pair<>(responseConsumer, System.currentTimeMillis()));
-
-        UUID finalId = id;
-        if (parcel.isSelfRun() || parcel.getClass().isAnnotationPresent(SelfRun.class)) {
-            Optional.ofNullable(parcels.get(parcel.getName())).ifPresent(parcel1 -> parcel1.onReceive(channel, finalId, parcel.getData()));
-        }
-        executor.submit(() -> {
-            try {
-                Jedis resource = jedisPool.getResource();
-                resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
-                debug(channel + ";" + senderId.toString() + ";" + parcel.getName() + ";" + parcel.getData() + ";" + finalId);
-                jedisPool.returnResource(resource);
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            HashMap<String, Object> data = parcel.getData();
+            System.out.println("autoparcel? " + (parcel instanceof AutoParcel));
+            if (parcel instanceof AutoParcel) {
+                data = objectMapper.convertValue(parcel, new TypeReference<HashMap<String, Object>>() {
+                });
             }
-        });
+            HashMap<String, Object> finalData = data;
+            debug("Sending parcel: " + id + " with data " + data);
+            if (id == null) id = UUID.randomUUID();
+            UUID finalId = id;
+            if (parcel.isSelfRun() || parcel.getClass().isAnnotationPresent(SelfRun.class)) {
+                debug("Parcel is self run so finding local receiver");
+                Optional.ofNullable(parcels.get(parcel.getName())).ifPresent(parcel1 -> parcel1.onReceive(channel, finalId, finalData));
+            }
+
+            @Nullable UUID finalId1 = id;
+            executor.submit(() -> {
+                try {
+                    debug("Submitting parcel to executor");
+                    Jedis resource = jedisPool.getResource();
+                    resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + objectMapper.writeValueAsString(finalData) + ";" + finalId);
+                    debug(channel + ";" + senderId + ";" + parcel.getName() + ";" + finalData + ";" + finalId);
+                    jedisPool.returnResource(resource);
+                    debug("Parcel sent");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (responseConsumer != null)
+                    responseConsumers.put(finalId1, new Pair<>(responseConsumer, System.currentTimeMillis()));
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -132,9 +149,9 @@ public class FedEx {
     /**
      * Sends a parcel over the network with a consumer waiting for a response parcel
      *
-     * @param id   The parcel id
-     * @param name The parcel name
-     * @param data Json data to be sent
+     * @param id               The parcel id
+     * @param name             The parcel name
+     * @param data             Json data to be sent
      * @param responseConsumer Consumer function that handles the response from the remote server
      */
     public void sendParcel(UUID id, String name, HashMap<String, Object> data, Consumer<FedExResponse> responseConsumer) {
@@ -226,7 +243,8 @@ public class FedEx {
 
     @SneakyThrows
     protected HashMap<String, Object> jsonToMap(String json) {
-        return objectMapper.readValue(json, new TypeReference<HashMap<String, Object>>() {});
+        return objectMapper.readValue(json, new TypeReference<HashMap<String, Object>>() {
+        });
     }
 
     @SneakyThrows

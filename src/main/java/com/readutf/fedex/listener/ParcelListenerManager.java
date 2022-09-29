@@ -22,6 +22,8 @@ public class ParcelListenerManager {
     public Object registerParcelListeners(Class<?> clazz, Object... classProps) {
         Class<?>[] classes = Arrays.stream(classProps).map(Object::getClass).toArray(value -> new Class<?>[classProps.length]);
 
+        System.out.println(Arrays.toString(clazz.getConstructors()));
+
         Optional<Constructor<?>> foundConstructors = Arrays.stream(clazz.getConstructors())
                 .filter(constructor -> propsMatch(constructor.getParameterTypes(), classes))
                 .findFirst();
@@ -69,10 +71,7 @@ public class ParcelListenerManager {
                 try {
                     method.invoke(methodObjectEntry.getValue(), uuid, data);
                 } catch (IllegalAccessException | InvocationTargetException e) {
-                    fedEx.debug("ERROR: " + e);
-                    for (StackTraceElement stackTraceElement : e.getStackTrace()) {
-                        fedEx.debug(stackTraceElement.toString());
-                    }
+                    e.printStackTrace();
 
                     fedEx.debug("Error occurred invoking parcel listener: " + e.getLocalizedMessage());
                 }
@@ -83,11 +82,15 @@ public class ParcelListenerManager {
 
     public boolean propsMatch(Class<?>[] foundClasses, Class<?>[] providedClasses) {
 
+        System.out.println("found: " + Arrays.toString(foundClasses));
+
         if (foundClasses.length == 0 && providedClasses.length == 0) return true;
         if (foundClasses.length != providedClasses.length) return false;
         for (int i = 0; i < foundClasses.length; i++) {
             Class<?> found = foundClasses[i];
             Class<?> provided = providedClasses[i];
+
+
 
             if (found != provided && !found.isAssignableFrom(provided)) {
                 return false;
