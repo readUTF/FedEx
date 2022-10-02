@@ -1,5 +1,7 @@
 package com.readutf.fedex;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.readutf.fedex.parcels.impl.AutoParcel;
@@ -53,7 +55,7 @@ public class FedEx {
         instance = this;
         this.channel = channel;
         this.jedisPool = jedisPool;
-        this.objectMapper = objectMapper;
+        this.objectMapper = objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
         senderId = UUID.randomUUID();
 
@@ -99,8 +101,10 @@ public class FedEx {
             HashMap<String, Object> data = parcel.getData();
             System.out.println("autoparcel? " + (parcel instanceof AutoParcel));
             if (parcel instanceof AutoParcel) {
-                data = objectMapper.convertValue(parcel, new TypeReference<HashMap<String, Object>>() {
-                });
+                System.out.println("is autoparcel");
+                System.out.println(parcel);
+                data = objectMapper.convertValue(parcel, new TypeReference<HashMap<String, Object>>() {});
+                System.out.println("data: " + data);
             }
             HashMap<String, Object> finalData = data;
             debug("Sending parcel: " + id + " with data " + data);
@@ -238,7 +242,7 @@ public class FedEx {
     }
 
     public void debug(Object s) {
-        if (debug) logger.warning((String) s);
+        if (debug) System.out.println((String) s);
     }
 
     @SneakyThrows
