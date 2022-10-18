@@ -1,5 +1,6 @@
 package com.readutf.fedex.utils;
 
+import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -9,11 +10,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.security.CodeSource;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Enumeration;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.stream.Collectors;
 
 @UtilityClass
 public final class ClassUtils {
@@ -25,14 +25,32 @@ public final class ClassUtils {
      * @return The object or null
      */
     @Nullable
-    @SuppressWarnings("unchecked")
-    public <T> T tryGetInstance(@NotNull Class<T> clazz) {
-        try {
-            Constructor<?> ctor = clazz.getConstructor();
-            return (T) ctor.newInstance();
-        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
-            return null;
+    @SuppressWarnings("unchecked") @SneakyThrows
+    public <T> T tryGetInstance(@NotNull Class<T> clazz, List<Object> contexts) {
+        Constructor<?>[] constructors = clazz.getConstructors();
+        Optional<Constructor<?>> emptyConstructor = Arrays.stream(constructors).filter(constructor -> constructor.getParameterTypes().length == 0).findFirst();
+        if(emptyConstructor.isPresent()) {
+            try {
+                return (T) emptyConstructor.get().newInstance();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+                return null;
+            }
+        } else {
+            Optional<Constructor<?>> matchingConstructor = Arrays.stream(constructors)
+                    .filter(constructor -> Arrays.stream(constructor.getParameterTypes()).allMatch(aClass -> contexts.stream().anyMatch(o -> o.getClass() == aClass)))
+                    .findFirst();
+            if(matchingConstructor.isPresent()) {
+                Constructor<?> constructor = matchingConstructor.get();
+                Class<?>[] neededTypes = constructor.getParameterTypes();
+                List<Object> matchingObjects = Arrays.stream(neededTypes).map(aClass -> contexts.stream().filter(o -> o.getClass() == aClass).findFirst().orElse(null)).collect(Collectors.toList());
+                return (T) constructor.newInstance(matchingObjects.toArray());
+            }
         }
+        return null;
+    }
+    public <T> T tryGetInstance(@NotNull Class<T> clazz) {
+        return tryGetInstance(clazz, Collections.emptyList());
     }
 
     /**
