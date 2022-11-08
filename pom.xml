@@ -8,26 +8,34 @@
     <artifactId>fedex</artifactId>
     <version>3.3.5</version>
 
-    <organization>
-        <name>AuraSide</name>
-        <url>https://auraside.com/</url>
-    </organization>
-
     <ciManagement>
         <system>Jenkins CI</system>
-        <url>https://jenkins.auraside.com/</url>
+        <url>https://jenkins.dev-ops.tips/</url>
     </ciManagement>
 
     <distributionManagement>
         <repository>
-            <id>auraside-nexus</id>
-            <url>https://nexus.auraside.com/repository/mpl/</url>
+            <id>devopstips</id>
+            <name>DevOpsTips-Release</name>
+            <layout>Release</layout>
+            <uniqueVersion>true</uniqueVersion>
+            <url>https://nexus.dev-ops.tips/repository/devops-public/</url>
         </repository>
         <snapshotRepository>
-            <id>auraside-nexus-snapshot</id>
-            <url>https://nexus.auraside.com/repository/mpl/</url>
+            <id>devopstips</id>
+            <name>DevOpsTips-Snapshot</name>
+            <layout>Snapshot</layout>
+            <uniqueVersion>true</uniqueVersion>
+            <url>https://nexus.dev-ops.tips/repository/devops-public-snapshot/</url>
         </snapshotRepository>
     </distributionManagement>
+
+    <repositories>
+        <repository>
+            <id>devopstips</id>
+            <url>https://nexus.dev-ops.tips/repository/maven-public/</url>
+        </repository>
+    </repositories>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
