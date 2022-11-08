@@ -48,6 +48,8 @@ public class FedEx {
     private boolean active;
     private Thread poolThread;
     private FedExPubSub pubSub;
+    private TimeoutTask timeoutTask;
+
     @Setter
     private boolean debug = false;
 
@@ -69,7 +71,7 @@ public class FedEx {
         active = true;
         poolThread = new Thread(() -> jedisPool.getResource().subscribe(pubSub = new FedExPubSub(this), channel));
         poolThread.start();
-        new TimeoutTask(new Timer(), this);
+        timeoutTask = new TimeoutTask(new Timer(), this);
 
 
 //        timeoutTask.start();
@@ -85,8 +87,8 @@ public class FedEx {
             pubSub.unsubscribe();
         }
         poolThread.interrupt();
-
         jedisPool.close();
+        timeoutTask.getTimer().cancel();
     }
 
     /**
@@ -99,12 +101,12 @@ public class FedEx {
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
         try {
             HashMap<String, Object> data = parcel.getData();
-            System.out.println("autoparcel? " + (parcel instanceof AutoParcel));
+            debug("autoparcel? " + (parcel instanceof AutoParcel));
             if (parcel instanceof AutoParcel) {
-                System.out.println("is autoparcel");
-                System.out.println(parcel);
+                debug("is autoparcel");
+                debug(parcel);
                 data = objectMapper.convertValue(parcel, new TypeReference<HashMap<String, Object>>() {});
-                System.out.println("data: " + data);
+                debug("data: " + data);
             }
             HashMap<String, Object> finalData = data;
             debug("Sending parcel: " + id + " with data " + data);
@@ -242,7 +244,7 @@ public class FedEx {
     }
 
     public void debug(Object s) {
-        if (debug) System.out.println((String) s);
+        if (debug) debug((String) s);
     }
 
     @SneakyThrows

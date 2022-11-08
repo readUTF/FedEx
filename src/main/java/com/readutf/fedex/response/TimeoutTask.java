@@ -2,16 +2,20 @@ package com.readutf.fedex.response;
 
 import com.readutf.fedex.FedEx;
 import com.readutf.fedex.utils.Pair;
+import lombok.Getter;
 
 import java.util.*;
 import java.util.function.Consumer;
 
+@Getter
 public final class TimeoutTask extends TimerTask {
 
+    Timer timer;
     FedEx fedEx;
 
     public TimeoutTask(Timer timer, FedEx fedEx) {
         this.fedEx = fedEx;
+        this.timer = timer;
         timer.scheduleAtFixedRate(this, 0, 1000);
     }
 

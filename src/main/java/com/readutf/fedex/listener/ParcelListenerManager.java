@@ -22,7 +22,6 @@ public class ParcelListenerManager {
     public Object registerParcelListeners(Class<?> clazz, Object... classProps) {
         Class<?>[] classes = Arrays.stream(classProps).map(Object::getClass).toArray(value -> new Class<?>[classProps.length]);
 
-        System.out.println(Arrays.toString(clazz.getConstructors()));
 
         Optional<Constructor<?>> foundConstructors = Arrays.stream(clazz.getConstructors())
                 .filter(constructor -> propsMatch(constructor.getParameterTypes(), classes))
@@ -82,7 +81,7 @@ public class ParcelListenerManager {
 
     public boolean propsMatch(Class<?>[] foundClasses, Class<?>[] providedClasses) {
 
-        System.out.println("found: " + Arrays.toString(foundClasses));
+//        System.out.println("found: " + Arrays.toString(foundClasses));
 
         if (foundClasses.length == 0 && providedClasses.length == 0) return true;
         if (foundClasses.length != providedClasses.length) return false;

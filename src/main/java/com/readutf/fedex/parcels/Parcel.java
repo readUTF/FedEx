@@ -8,6 +8,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 @Getter
@@ -47,6 +51,17 @@ public abstract class Parcel {
         fedEx.sendParcel(this);
     }
 
+    public FedExResponse sendAndGet(FedEx fedEx) {
+        UUID id = UUID.randomUUID();
+        CompletableFuture<FedExResponse> future = new CompletableFuture<>();
+        fedEx.sendParcel(id, this, future::complete);
+        try {
+            return future.get(3, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            return new FedExResponse(id, FedExResponse.ResponseType.TIMED_OUT, new HashMap<>());
+        }
+    }
+
     /**
      * Helper function that calls {@link FedEx#sendParcel(Parcel)} with `this`
      */
@@ -54,7 +69,8 @@ public abstract class Parcel {
         fedEx.sendParcel(this, responseConsumer);
     }
 
-    @Getter @Setter
+    @Getter
+    @Setter
     private boolean selfRun = false;
 
     @NotNull
