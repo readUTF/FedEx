@@ -34,12 +34,5 @@ public final class TimeoutTask extends TimerTask {
             }
         }
         toRemove.forEach(responseConsumers::remove);
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
     }
 }

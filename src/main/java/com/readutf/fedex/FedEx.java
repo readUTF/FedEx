@@ -244,7 +244,7 @@ public class FedEx {
     }
 
     public void debug(Object s) {
-        if (debug) debug((String) s);
+        if (debug) System.out.println(s);
     }
 
     @SneakyThrows
