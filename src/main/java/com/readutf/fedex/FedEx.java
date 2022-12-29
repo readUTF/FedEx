@@ -4,14 +4,16 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.readutf.fedex.listener.ParcelListenerManager;
+import com.readutf.fedex.parcels.Parcel;
 import com.readutf.fedex.parcels.impl.AutoParcel;
 import com.readutf.fedex.response.FedExResponse;
 import com.readutf.fedex.response.FedExResponseParcel;
+import com.readutf.fedex.response.TimeoutTask;
 import com.readutf.fedex.utils.ClassUtils;
 import com.readutf.fedex.utils.Pair;
-import com.readutf.fedex.listener.ParcelListenerManager;
-import com.readutf.fedex.parcels.Parcel;
-import com.readutf.fedex.response.TimeoutTask;
+import com.readutf.uls.Logger;
+import com.readutf.uls.LoggerFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -24,26 +26,29 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
 @Getter
 public class FedEx {
 
-    @Deprecated
-    @Getter
-    private static FedEx instance;
+    @Deprecated @Getter private static FedEx instance;
+    @Getter private static LoggerFactory loggerFactory;
+    private static Logger logger;
 
-    @Getter
-    private static final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
+    static {
+        loggerFactory = new LoggerFactory("FedEx");
+        logger = loggerFactory.getLogger(FedEx.class);
+    }
+
+
+    @Getter private static final Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = new HashMap<>();
     private final Map<String, Parcel> parcels = new HashMap<>();
     private final UUID senderId;
     private final String channel;
     private final JedisPool jedisPool;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final ObjectMapper objectMapper;
-    private Logger logger = Logger.getLogger("FedEx");
     private final ParcelListenerManager parcelListenerManager;
     private boolean active;
     private Thread poolThread;
@@ -81,7 +86,7 @@ public class FedEx {
      * Close all messaging channels and disconnect from redis
      */
     public void close() {
-        debug("fedex closed");
+        logger.debug("Closing fedex...");
         active = false;
         if (pubSub != null && pubSub.isSubscribed()) {
             pubSub.unsubscribe();
@@ -89,6 +94,7 @@ public class FedEx {
         poolThread.interrupt();
         jedisPool.close();
         timeoutTask.getTimer().cancel();
+        logger.debug("FedEx shutdown");
     }
 
     /**
@@ -99,33 +105,35 @@ public class FedEx {
      * @param responseConsumer The response consumer
      */
     public void sendParcel(@Nullable UUID id, @NotNull Parcel parcel, @Nullable Consumer<FedExResponse> responseConsumer) {
+
+        Logger parcelLogger = loggerFactory.getLogger(parcel.getClass());
         try {
             HashMap<String, Object> data = parcel.getData();
-            debug("autoparcel? " + (parcel instanceof AutoParcel));
+            parcelLogger.debug("autoparcel? " + (parcel instanceof AutoParcel));
             if (parcel instanceof AutoParcel) {
-                debug("is autoparcel");
-                debug(parcel);
+                parcelLogger.debug("is autoparcel");
+                parcelLogger.debug(parcel);
                 data = objectMapper.convertValue(parcel, new TypeReference<HashMap<String, Object>>() {});
-                debug("data: " + data);
+                parcelLogger.debug("data: " + data);
             }
             HashMap<String, Object> finalData = data;
-            debug("Sending parcel: " + id + " with data " + data);
+            parcelLogger.debug("Sending parcel: " + id + " with data " + data);
             if (id == null) id = UUID.randomUUID();
             UUID finalId = id;
             if (parcel.isSelfRun() || parcel.getClass().isAnnotationPresent(SelfRun.class)) {
-                debug("Parcel is self run so finding local receiver");
+                parcelLogger.debug("Parcel is self run so finding local receiver");
                 Optional.ofNullable(parcels.get(parcel.getName())).ifPresent(parcel1 -> parcel1.onReceive(channel, finalId, finalData));
             }
 
             @Nullable UUID finalId1 = id;
             executor.submit(() -> {
                 try {
-                    debug("Submitting parcel to executor");
+                    parcelLogger.debug("Submitting parcel to executor");
                     Jedis resource = jedisPool.getResource();
                     resource.publish(channel, senderId.toString() + ";" + parcel.getName() + ";" + objectMapper.writeValueAsString(finalData) + ";" + finalId);
-                    debug(channel + ";" + senderId + ";" + parcel.getName() + ";" + finalData + ";" + finalId);
+                    parcelLogger.debug(channel + ";" + senderId + ";" + parcel.getName() + ";" + finalData + ";" + finalId);
                     jedisPool.returnResource(resource);
-                    debug("Parcel sent");
+                    parcelLogger.debug("Parcel sent");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -215,9 +223,9 @@ public class FedEx {
     public void registerParcel(@NotNull Class<? extends Parcel> parcelClass) {
         Parcel parcel = ClassUtils.tryGetInstance(parcelClass);
         if (parcel == null) {
-            logger.warning("[FedEx] Parcel " + parcelClass.getName() + " could not be registered, please make a no-arg constructor.");
+            logger.warn("[FedEx] Parcel " + parcelClass.getName() + " could not be registered, please make a no-arg constructor.");
         } else {
-            logger.warning("[FedEx] Parcel " + parcelClass.getSimpleName() + " has been registered.");
+            logger.warn("[FedEx] Parcel " + parcelClass.getSimpleName() + " has been registered.");
             parcels.put(parcel.getName(), parcel);
         }
     }
@@ -241,10 +249,6 @@ public class FedEx {
     @SafeVarargs
     public final void registerParcels(Class<? extends Parcel>... classes) {
         Stream.of(classes).forEach(this::registerParcel);
-    }
-
-    public void debug(Object s) {
-        if (debug) System.out.println(s);
     }
 
     @SneakyThrows

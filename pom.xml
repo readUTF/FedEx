@@ -59,6 +59,11 @@
             <version>1.18.22</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.readutf</groupId>
+            <artifactId>ULS</artifactId>
+            <version>1.0.4</version>
+        </dependency>
     </dependencies>
 
     <build>

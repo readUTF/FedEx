@@ -1,7 +1,7 @@
 package com.readutf.fedex.utils;
 
 import com.readutf.fedex.FedEx;
-import lombok.Setter;
+import com.readutf.uls.Logger;
 import lombok.SneakyThrows;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -12,8 +12,8 @@ import java.util.function.Function;
 
 public class JedisQuick {
 
-    @Setter
-    private boolean debug = false;
+
+    private static Logger logger = FedEx.getLoggerFactory().getLogger(JedisQuick.class);
 
     private FedEx fedEx;
 
@@ -160,8 +160,7 @@ public class JedisQuick {
     }
 
     public void handleDebug(String type) {
-        if(!debug) return;
-        fedEx.debug(type + " called from: " + Thread.currentThread().getStackTrace()[3]);
+        logger.debug(type + " called from: " + Thread.currentThread().getStackTrace()[3]);
     }
 
 }

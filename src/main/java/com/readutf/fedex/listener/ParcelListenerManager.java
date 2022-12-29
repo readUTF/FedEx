@@ -2,6 +2,7 @@ package com.readutf.fedex.listener;
 
 import com.readutf.fedex.FedEx;
 import com.readutf.fedex.response.FedExResponse;
+import com.readutf.uls.Logger;
 import lombok.SneakyThrows;
 
 import java.lang.reflect.Constructor;
@@ -10,6 +11,8 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class ParcelListenerManager {
+
+    private static Logger logger = FedEx.getLoggerFactory().getLogger(ParcelListenerManager.class);
 
     FedEx fedEx;
     private HashMap<Method, Object> parcelListeners = new HashMap<>();
@@ -34,12 +37,12 @@ public class ParcelListenerManager {
             for (final Method method : clazz.getMethods()) {
                 if (method.isAnnotationPresent(ParcelListener.class)) {
                     if (method.getParameterTypes().length < 2) {
-                        fedEx.debug("Invalid parameters for parcel listener");
+                        logger.debug("Invalid parameters for parcel listener");
                     } else if (method.getParameterTypes()[0] != UUID.class || method.getParameterTypes()[1] != HashMap.class) {
-                        fedEx.debug("Parcel listener parameters should be [UUID, JsonObject]");
+                        logger.debug("Parcel listener parameters should be [UUID, JsonObject]");
                     } else {
                         this.parcelListeners.put(method, o);
-                        fedEx.debug("(" + clazz.getSimpleName() + ") Registered parcel listener with name " + method.getName());
+                        logger.debug("(" + clazz.getSimpleName() + ") Registered parcel listener with name " + method.getName());
                     }
                 }
             }
@@ -61,7 +64,7 @@ public class ParcelListenerManager {
                 try {
                     return (FedExResponse) method.invoke(methodObjectEntry.getValue(), uuid, data);
                 } catch (IllegalAccessException e) {
-                    fedEx.debug("Error occurred invoking parcel listener");
+                    logger.debug("Error occurred invoking parcel listener");
                     e.printStackTrace();
                 } catch (InvocationTargetException e) {
                     throw e.getCause();
@@ -72,7 +75,7 @@ public class ParcelListenerManager {
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     e.printStackTrace();
 
-                    fedEx.debug("Error occurred invoking parcel listener: " + e.getLocalizedMessage());
+                    logger.debug("Error occurred invoking parcel listener: " + e.getLocalizedMessage());
                 }
             }
         }
@@ -80,8 +83,6 @@ public class ParcelListenerManager {
     }
 
     public boolean propsMatch(Class<?>[] foundClasses, Class<?>[] providedClasses) {
-
-//        System.out.println("found: " + Arrays.toString(foundClasses));
 
         if (foundClasses.length == 0 && providedClasses.length == 0) return true;
         if (foundClasses.length != providedClasses.length) return false;

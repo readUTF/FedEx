@@ -20,10 +20,9 @@ public final class TimeoutTask extends TimerTask {
     }
 
     @Override
-    @SuppressWarnings("BusyWait")
     public void run() {
         List<UUID> toRemove = new ArrayList<>();
-        Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = fedEx.getResponseConsumers();
+        Map<UUID, Pair<Consumer<FedExResponse>, Long>> responseConsumers = FedEx.getResponseConsumers();
         for (Map.Entry<UUID, Pair<Consumer<FedExResponse>, Long>> entry : responseConsumers.entrySet()) {
             UUID uuid = entry.getKey();
             Pair<Consumer<FedExResponse>, Long> responseConsumerAndTimestamp = entry.getValue();
